@@ -1,0 +1,169 @@
+{% extends "web/root/origin.html" %}
+{% load static %}
+
+{% block title %}
+  {{ nameWeb }} - {{ title }}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+  <div class="page-inner">
+    <h3 class="fw-bold mb-3">{{ sensor.device }} - {{ sensor.serial_number }}</h3>
+    <p>{{ sensor.description }}</p>
+
+    <div class="row">
+      <!-- Decision Messages -->
+      <div class="col-sm-6 col-md-6">
+        <div class="card card-stats card-round">
+          <div class="card-header">
+            <h4 class="card-title">Decision Messages</h4>
+          </div>
+          <div class="card-body">
+            <ul>
+               <li class="message">Mensaje por defecto</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time and Temperature Stats -->
+      <div class="col-sm-6 col-md-6">
+        <div class="card card-stats card-round">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-icon">
+                <div class="icon-big text-center icon-secondary bubble-shadow-small">
+                  <i class="fas fa-clock"></i>
+                </div>
+              </div>
+              <div class="col col-stats ms-3 ms-sm-0">
+                <div class="numbers">
+                  <p class="card-category">Time Range</p>
+                  <h4 class="card-title">{{ decimal_days }} days = {{ decimal_hours }} hours</h4>
+                  <span>{{ min_date }} - {{ max_date }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-stats card-round">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-icon">
+                <div class="icon-big text-center icon-danger bubble-shadow-small">
+                  <i class="fas fa-thermometer-full"></i>
+                </div>
+              </div>
+              <div class="col col-stats ms-3 ms-sm-0">
+                <div class="numbers">
+                  <p class="card-category">Max Temperature</p>
+                  <h4 class="card-title">{{ max_temp }}°C</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-icon">
+                <div class="icon-big text-center icon-primary bubble-shadow-small">
+                  <i class="fas fa-thermometer-empty"></i>
+                </div>
+              </div>
+              <div class="col col-stats ms-3 ms-sm-0">
+                <div class="numbers">
+                  <p class="card-category">Min Temperature</p>
+                  <h4 class="card-title">{{ min_temp }}°C</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+
+      <!-- Graph Image -->
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Analysis</div>
+          </div>
+          <div class="card-body text-center">
+            <!-- Spinner de carga -->
+            <div id="loading-spinner" style="display: block;">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <!-- Imagen del gráfico -->
+            <img id="sensor-graph" alt="Graph Analysis" class="img-fluid" style="display: none;" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extraJs %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const apiUrl = "{% url 'api_generate_temperatures_limits' sensor.id %}";
+    const imgElement = document.getElementById('sensor-graph');
+    const messageElement = document.querySelector('li.message');
+    
+    const loadingSpinner = document.getElementById('loading-spinner');
+
+    fetchGraphAndMessage(apiUrl);
+ 
+    function fetchGraphAndMessage(apiUrl) {
+        // Mostrar el spinner mientras se carga
+        loadingSpinner.style.display = 'block';
+        loadingSpinner.innerHTML = '<p>Loading...</p>';
+
+        fetch(apiUrl)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || 'Error loading chart');
+                });
+            })
+            .then(data => {
+                // Ocultar el spinner
+                loadingSpinner.style.display = 'none';
+
+                // Limpiar mensajes previos de error
+                loadingSpinner.innerHTML = '';
+
+                // Agregar prefijo base64 y asignar la imagen
+                imgElement.src = `data:image/png;base64,${data.image}`;
+                imgElement.style.display = 'block'; // Mostrar la imagen
+
+                // Asignar el mensaje
+                messageElement.textContent = data.message;
+            
+            })
+            .catch(error => {
+                console.error('Error:', error);
+
+                // Mostrar el mensaje de error
+                loadingSpinner.style.display = 'block';
+                loadingSpinner.innerHTML = `<p>${error.message}</p>`;
+
+                // Ocultar la imagen y limpiar el contenido anterior
+                imgElement.style.display = 'none';
+                messageElement.textContent = '';
+                t_h_at_max_lpaElement.textContent = '';
+            });
+    }
+
+
+});
+
+</script>
+{% endblock %}

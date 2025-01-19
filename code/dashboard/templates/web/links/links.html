@@ -1,0 +1,24 @@
+{% load static %} {% static "" as baseUrl %}
+
+<div class="container marketing" id="links">
+    <!-- Three columns of text below the carousel -->
+    <div class="row">
+      <div class="col-lg-12 text-center">
+        <img src="{% static 'web/assets/logos/laurelDorado.png' %}" />
+
+        <h1>LINKS DE INTERES</h1>
+      
+      </div>
+    
+      {% for value in banner %}
+      <div class="col-lg-3 text-center">
+        <a href="{{ value.url}}" target="_blank">
+          <img src="media/{{ value.img}}"  width="250px" alt="">
+          <h6 class="fw-normal" style="color: black; font-family: roboto">{{ value.titulo | upper}}</h6>
+        </a>
+      </div>
+      {% endfor %}
+      
+    </div>
+    <!-- /.row -->
+  </div>

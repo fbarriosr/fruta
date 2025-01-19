@@ -1,0 +1,68 @@
+
+    cuando  LPA >= 1:
+
+    fila 1 
+        no hace nada:
+    fila 2 
+        b = round(k_b * np.log(mT) + a_b, self.cifra)
+        n = round(k_n * (mT ** a_n), self.cifra)
+        df.at[i, 'b'] = b
+        df.at[i, 'n'] = n
+        # Modelo original
+        logN = round(b * (dt ** n), self.cifra)
+        df.at[i, 'logN'] = logN
+
+        # Modelo compuesto
+        logNc = round(bc * (dt ** nc), self.cifra)
+        df.at[i, 'logNc'] = logNc
+
+        RPI = round(logN / logNc, self.cifra) if logNc > 0 else pd.NA
+        df.at[i, 'RPI'] = RPI
+    fila 3 en adelante
+
+        b = round(k_b * np.log(mT) + a_b, self.cifra)
+        n = round(k_n * (mT ** a_n), self.cifra)
+        df.at[i, 'b'] = b
+        df.at[i, 'n'] = n
+
+        # Modelo original
+        prev_logN = df['logN'].iloc[i - 1] 
+        
+        tx = round((prev_logN / b) ** (1 / n) , self.cifra)
+        Na = round(b * ((tx + dtu) ** n) , self.cifra)
+        Nb = round(b * ((tx - dtu) ** n) , self.cifra)
+        mu = round((Na - Nb) / dtu, self.cifra)
+        df.at[i, 'tx'] = tx
+        df.at[i, 'Na'] = Na
+        df.at[i, 'Nb'] = Nb
+        df.at[i, 'mu'] = mu
+
+        logN = round(mu * dt  + prev_logN , self.cifra)
+        df.at[i, 'logN'] = logN
+
+        # Modelo compuesto
+        prev_logNc = df['logNc'].iloc[i - 1] 
+        
+
+        txc = round((prev_logNc / bc) ** (1 / nc) , self.cifra)
+        Nac = round(bc * ((txc + dtu) ** nc) , self.cifra)
+        Nbc = round(bc * ((txc - dtu) ** nc) , self.cifra)
+        muc = round((Nac - Nbc) / dtu, self.cifra)
+        df.at[i, 'txc'] = txc
+        df.at[i, 'Nac'] = Nac
+        df.at[i, 'Nbc'] = Nbc
+        df.at[i, 'muc'] = muc
+
+        logNc = round(muc * dt  + prev_logNc , self.cifra)
+        df.at[i, 'logNc'] = logNc
+
+        RPI = round(logN / logNc, self.cifra) if logNc > 0 else pd.NA
+        df.at[i, 'RPI'] = RPI
+        
+        # Calcular mRPI si existen suficientes registros
+        if pd.notna(logN) and pd.notna(df['logN'].iloc[i - 120]) and pd.notna(logNc) and pd.notna(df['logNc'].iloc[i - 120]):
+            mRPI = round((logN - df['logN'].iloc[i - 120]) / (logNc - df['logNc'].iloc[i - 120]), self.cifra)
+        else:
+            mRPI = pd.NA
+
+        df.at[i, 'mRPI'] = mRPI

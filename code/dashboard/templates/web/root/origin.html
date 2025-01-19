@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+{% load static %} {% static "" as baseUrl %}
+
+<html lang="en" data-bs-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Kaiadmin - Bootstrap 5 Admin Dashboard" />
+    <meta name="author" content="Fran" />
+    <meta name="generator" content="Django" />
+    <title>
+      {% block title %}
+      Kaiadmin - Dashboard
+      {% endblock %}
+    </title>
+    
+    {% block fontIcon %}
+    <link rel="icon" href="{% static 'dashboard/assets/img/kaiadmin/favicon.ico' %}" type="image/x-icon">
+    <script src="{% static 'dashboard/assets/js/plugin/webfont/webfont.min.js' %}"></script>
+    <script>
+      WebFont.load({
+        google: { families: ["Public Sans:300,400,500,600,700"] },
+        custom: {
+          families: [
+            "Font Awesome 5 Solid",
+            "Font Awesome 5 Regular",
+            "Font Awesome 5 Brands",
+            "simple-line-icons",
+          ],
+          urls: ["{% static 'dashboard/assets/css/fonts.min.css' %}"],
+        },
+        active: function () {
+          sessionStorage.fonts = true;
+        },
+      });
+    </script>
+    {% endblock %}
+
+    <link href="{% static 'dashboard/assets/css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'dashboard/assets/css/plugins.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'dashboard/assets/css/kaiadmin.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'dashboard/assets/css/demo.css' %}" rel="stylesheet" />
+
+
+    {% block appJsCss %}
+    <!-- Additional CSS or JS can be added here -->
+    {% endblock %}
+  </head>
+  <body class="{{ loginClass }}"> 
+    <div class="wrapper sidebar_minimize">
+      {% block sidebar %}
+      {% include "web/sidebar/sidebar.html" %}
+      {% endblock %}
+
+      <div class="main-panel">
+        {% block header %}
+        {% include "web/header/header.html" %}
+        {% endblock %}
+
+        <div class="container">
+          <div class="page-inner">
+            {% block body %}
+            <div
+              class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4"
+            >
+              <div>
+                <h3 class="fw-bold mb-3">Dashboard</h3>
+                <h6 class="op-7 mb-2">Free Bootstrap 5 Admin Dashboard</h6>
+              </div>
+              <div class="ms-md-auto py-2 py-md-0">
+                <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
+                <a href="#" class="btn btn-primary btn-round">Add Customer</a>
+              </div>
+            </div>
+            <!-- Custom Dashboard content goes here -->
+            {% endblock %}
+          </div>
+        </div>
+
+        {% block footer %}
+        {% include "web/footer/footer.html" %}
+        {% endblock %}
+      </div>
+    </div>
+
+    <script src="{% static 'dashboard/assets/js/core/jquery-3.7.1.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/core/popper.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/core/bootstrap.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/plugin/chart.js/chart.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/plugin/sweetalert/sweetalert.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/kaiadmin.min.js' %}"></script>
+
+
+
+    <script>
+  
+
+  </script>
+
+
+    {% block extraJs %}
+    <!-- Additional JS can be added here -->
+    {% endblock %}
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{% load static %} {% static "" as baseUrl %}
+<footer class="footer">
+  <div class="container-fluid d-flex justify-content-between">
+    <nav class="pull-left">
+      <ul class="nav">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.themekita.com" target="_blank">
+            ThemeKita
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Help</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Licenses</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="copyright text-end">
+      &copy; {{ current_year }}, made with 
+      <i class="fa fa-heart text-danger"></i> by 
+      <a href="https://www.themekita.com" target="_blank">ThemeKita</a>.
+    </div>
+  </div>
+</footer>

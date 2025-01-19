@@ -1,0 +1,145 @@
+{% extends "web/root/origin.html" %}
+{% load static %}
+{% static "" as baseUrl %}
+{% block title %}
+  {{ nameWeb }} | {{ title }}
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+    <div class="page-inner">
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">{{ title }}</div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Formulario para cargar archivo -->
+                        <form method="post" enctype="multipart/form-data" action="{% url 'add_records' trip.id %}">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-group">
+                                        <label for="sensorTagInput">Sensor Tag</label>
+                                        <input type="text" name="sensor_tag" class="form-control" id="sensorTagInput" placeholder="Enter sensor tag (optional)" />
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 col-lg-1">
+                                    <div class="form-group">
+                                        <label for="palletLocationSelect">Pallet Location</label>
+                                        <select name="pallet_location" class="form-control" id="palletLocationSelect" required>
+                                            {% for location in pallet_locations %}
+                                            <option value="{{ location.id }}">{{ location.position }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-2">
+                                    <div class="form-group">
+                                        <label for="sensorPositionSelect">Sensor Position</label>
+                                        <select name="sensor_position" class="form-control" id="sensorPositionSelect" required>
+                                            {% for position in sensor_locations %}
+                                            <option value="{{ position.id }}">{{ position.description }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-group">
+                                        <label for="dataFileInput">Select File</label>
+                                        <input type="file" name="data_file" class="form-control-file" id="dataFileInput" required />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-action">
+                                <button type="submit" class="btn btn-success">Upload</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas y mensajes de estado -->
+        {% if alert %}
+        <div class="alert alert-info">
+            {{ alert }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="alert alert-success">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if sensor_info %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <div class="card-title">Sensor Information</div>
+            </div>
+            <div class="card-body">
+                <p><strong>Device:</strong> {{ sensor_info.device }}</p>
+                <p><strong>Serial Number:</strong> {{ sensor_info.serial_number }}</p>
+                <p><strong>Status:</strong> {{ sensor_info.created|yesno:"Created,Existing" }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if errors %}
+        <div class="alert alert-warning">
+            <h5>Encountered Errors:</h5>
+            <ul>
+                {% for err in errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if debug_info %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <div class="card-title">Debug Information</div>
+            </div>
+            <div class="card-body">
+                <h5>Trip Dates</h5>
+                <p><strong>Departure Date:</strong> {{ debug_info.departure_date }}</p>
+                <p><strong>Arrival Date:</strong> {{ debug_info.arrival_date }}</p>
+
+                <h5>Processed Time Strings</h5>
+                <ul>
+                    {% for time in debug_info.record_times %}
+                    <li>{{ time }}</li>
+                    {% endfor %}
+                    {% for time in debug_info.record_numbers %}
+                    <li>{{ time }}</li>
+                    {% endfor %}
+                    {% for time in debug_info.record_time_strings %}
+                    <li>{{ time }}</li>
+                    {% endfor %}
+                    {% for time in debug_info.record_temperatures%}
+                    <li>{{ time }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extraJs %}
+<!-- Add any additional JavaScript if needed -->
+{% endblock %}

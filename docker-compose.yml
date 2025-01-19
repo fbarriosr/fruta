@@ -1,0 +1,28 @@
+version: "3"
+services:
+  db:
+    container_name: db_frutas
+    image: postgres:15
+    restart: always
+    volumes:
+      - ./code/data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  web:
+    container_name: web_frutas
+    restart: always
+    build: ./code
+    image: frutas:tag
+    command: python manage.py runserver 0.0.0.0:7000
+    volumes:
+      - ./code:/code
+    ports:
+      - "7000:7000"
+    depends_on:
+      - db
+
+  
+  

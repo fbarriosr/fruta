@@ -1,0 +1,40 @@
+{% load static %} {% static "" as baseUrl %}
+
+<div class="container evento">
+        <!-- Three columns of text below the carousel -->
+        <div class="row  ">
+          <div class="col-sm-12">
+            <br><br>
+            {% for value in mainCard %}  
+            <div class="card mb-3 " >
+              <div class="row g-0">
+                <div class="col-md-8">
+                  <img src="media/{{ value.img }}" class="img-fluid rounded-start torneo" alt="...">
+                </div>
+                <!-- {{ gato.titulo|lower }} -->
+                <!-- {{ mainCard.0.descripcion|upper }} -->
+                <div class="col-md-4">
+                  <div class="card-body">
+                    <h4 class="card-title"> {{value.titulo | upper }}  </h4>
+                    <h5> Próximo Torneo 
+                      {% if value.activo %}
+                      <img src="static/web/assets/logos/lockOpen.png" style="padding: 10px;">
+                      {% else %}
+                      <img src="static/web/assets/logos/lockClose.png" style="padding: 10px;">
+                      {% endif %}
+                    </h5>
+                        
+
+                    <h6> <img src="static/web/assets/logos/point.png" style="padding: 5px;"> {{value.direccion |capfirst}}, {{value.get_region_display }}</h6>
+                    <p class="card-text">{{ value.descripcion |capfirst }}</p>
+                    <small class="text-body-secondary"> <img src="static/web/assets/logos/calendario.png" style="padding: 10px;">{{value.fecha|date:"d/m/Y"}}
+                    <img src="static/web/assets/logos/user.png" style="padding-left:30px; "> {{value.inscritos}}/{{value.cupos}} 
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+       </div><!-- /.container -->

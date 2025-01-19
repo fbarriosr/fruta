@@ -1,0 +1,190 @@
+{% extends "web/root/origin.html" %}
+{% block title %}
+  Trip Details: {{ object.license_plate }}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="page-inner">
+        <!-- Información del viaje -->
+        <h3 class="fw-bold mb-3">Trip Details</h3>
+        <div class="row">
+              <div class="col-sm-6 col-lg-3">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-info me-3">
+                      <i class="fa fa-user-check"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>License Plate:</strong> {{ object.license_plate }}
+                        </b>
+                      </h5>
+                      <small class="text-muted"><strong>Driver:</strong> {{ object.driver }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-warning me-3">
+                      <i class="fa fa-luggage-cart"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>Shipment:</strong> 
+                        </b>
+                        <small>{{ object.shipment }}</small>
+                      </h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-warning me-3">
+                      <i class="fa fa-archive"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>Product:</strong> 
+                        </b>
+                        <small>{{ object.product.description }}</small>
+                      </h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-warning me-3">
+                      <i class="fa fa-cookie"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>Microorganism:</strong> 
+                        </b>
+                        <small>{{ object.microorganism.description }}</small>
+                      </h5>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-sm-6 col-lg-6">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-secondary me-3">
+                      <i class="fa fa-map-marked"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>From:</strong> {{ object.origin }}
+                        </b>
+                      </h5>
+                      <small class="text-muted">{{ object.departure_date|date:"Y-m-d H:i" }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-6">
+                <div class="card p-3">
+                  <div class="d-flex align-items-center">
+                    <span class="stamp stamp-md bg-secondary me-3">
+                      <i class="fa fa-map-marked-alt"></i>
+                    </span>
+                    <div>
+                      <h5 class="mb-1">
+                        <b> 
+                        <strong>To:</strong> {{ object.destination }}
+                        </b>
+                      </h5>
+                      <small class="text-muted">{{ object.arrival_date|date:"Y-m-d H:i" }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+        </div>
+        <!-- Botón para agregar sensores -->
+        <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+            <div class="ms-md-auto py-2 py-md-0">
+                <a href="{% url 'add_records' object.id %}" class="btn btn-primary btn-round mb-0">Add Sensor</a>
+            </div>
+        </div>
+
+        <!-- Listado de sensores -->
+        <h4 class="mt-4">Sensors Associated with the Trip</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Sensors</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <!-- Tabla de sensores -->
+                            <table class="display table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Serial Number</th>
+                                        <th>Device</th>
+                                        <th>Tag</th>
+                                        <th>Description</th>
+                                        <th>Pallet Location</th>
+                                        <th>Sensor Position</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sensor in sensors %}
+                                    <tr>
+                                        <td>{{ sensor.serial_number }}</td>
+                                        <td>{{ sensor.device }}</td>
+                                        <td>{{ sensor.tag }}</td>
+                                        <td>{{ sensor.description }}</td>
+                                        <td>{{ sensor.pallet_location.position }}</td>
+                                        <td>{{ sensor.sensor_position.description }}</td>
+                                        <td>
+                                            <!-- Enlace para ver detalles del sensor -->
+                                            <a href="{% url 'analysis' sensor.id %}" class="btn btn-success btn-sm">Analysis</a>
+                                            <a href="{% url 'detail' sensor.id %}" class="btn btn-info btn-sm">View Details</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <!-- Paginación -->
+                            <div class="pagination">
+                                <span class="step-links">
+                                    {% if sensors.has_previous %}
+                                        <a href="?page=1">&laquo; First</a>
+                                        <a href="?page={{ sensors.previous_page_number }}">Previous</a>
+                                    {% endif %}
+
+                                    <span class="current">
+                                        Page {{ sensors.number }} of {{ sensors.paginator.num_pages }}
+                                    </span>
+
+                                    {% if sensors.has_next %}
+                                        <a href="?page={{ sensors.next_page_number }}">Next</a>
+                                        <a href="?page={{ sensors.paginator.num_pages }}">Last &raquo;</a>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

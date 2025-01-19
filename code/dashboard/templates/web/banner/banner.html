@@ -1,0 +1,49 @@
+{% load static %} {% static "" as baseUrl %}
+
+ <div id="myCarousel" class="carousel slide mb-6" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+    {% for value in galeria %}
+
+        <button
+        type="button"
+        data-bs-target="#myCarousel"
+        data-bs-slide-to="{{ value.order }}"
+        {% if value.order == 0%}
+        class="active"
+        {% endif %}
+        aria-current="true"
+        aria-label= "{{ value.titulo }}"
+        ></button>
+
+    {% endfor %}
+    </div>
+
+
+    <div class="carousel-inner">
+    {% for value in galeria %}
+     
+      <div class="carousel-item {% if value.order == 0%} active {% endif %}">
+        <img src="media/{{ value.img}}"   />
+      </div>
+    {% endfor %}
+    </div>
+
+    <button
+      class="carousel-control-prev"
+      type="button"
+      data-bs-target="#myCarousel"
+      data-bs-slide="prev"
+    >
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+    <button
+      class="carousel-control-next"
+      type="button"
+      data-bs-target="#myCarousel"
+      data-bs-slide="next"
+    >
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
+  </div> 

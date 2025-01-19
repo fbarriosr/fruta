@@ -1,0 +1,81 @@
+{% load static %} {% static "" as baseUrl %}
+
+<header data-bs-theme="">
+  <nav
+    class="navbar navbar-expand-md navbar-light fixed-top bg-dark"
+    style="background-color: #e3f2fd"
+  >
+    <div class="container-fluid">
+      <a class="navbar-brand"  href="#" style="pointer-events: none; cursor: default; text-decoration: none;"
+        ><img src="{% static 'web/assets/logos/logo.png' %}"
+      width="50px" /></a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarCollapse"
+        aria-controls="navbarCollapse"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon iColorBlack"></span>
+      </button>
+      <div
+        class="collapse navbar-collapse justify-content-end"
+        id="navbarCollapse"
+      > 
+        <ul class="navbar-nav me-auto mb-2 mb-md-0">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'home'%}">INICIO</a>
+          </li>
+          <li class="nav-item dropdown">
+            <button
+              class="btn dropdown-toggle nav-link active"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              EL CLUB
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item menu"  href="{% url 'historia'%}">HISTORIA</a></li>
+              <li><a class="dropdown-item menu" href="{% url 'directorio'%}" >DIRECTORIO</a></li>
+              <li><a class="dropdown-item menu" href="{% url 'comite'%}" >COMITES</a></li>
+              <li><a class="dropdown-item menu" href="{% url 'estatutos'%}">ESTATUTOS</a></li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'home'%}#links">LINKS DE INTERES</a>
+          </li>
+          <li class="nav-item dropdown">
+            <button
+              class="btn dropdown-toggle nav-link active"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              LINKS
+            </button>
+            <ul class="dropdown-menu">
+              {% for value in linksMenu %}
+              <li><a class="dropdown-item menu"  href="{{ value.url}}" target="_blank">{{ value.titulo | upper}}</a></li>
+              {% endfor %}
+            </ul>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'home'%}#contacto">CONTACTO</a>
+          </li>
+        </ul>
+      </div>
+      <a class="nav-link" href="{% url 'login'%}"> 
+          INGRESO
+          <img
+            src="{% static 'web/assets/logos/loginBall.png' %}"
+            width="20px"
+            class="rounded"
+            alt="..."
+          /> 
+        
+        </a>
+    </div>
+  </nav>
+</header>

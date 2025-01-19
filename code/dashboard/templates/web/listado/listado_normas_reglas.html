@@ -1,0 +1,23 @@
+{% load static %} {% static "" as baseUrl %}
+
+<div class="container marketing" id="links">
+  <!-- Three columns of text below the carousel -->
+  <div class="row">
+    <div class="col-lg-12 context">
+      <h1>NORMAS Y REGLAMENTOS</h1>
+    </div>
+
+    {% for value in listado %}
+
+      <div class="card mb-3" style="width: 18rem;">
+        <div class="card-body">
+          <h5 class="card-title">{{ value.titulo }}</h5>
+          <p class="card-text">{{ value.descripcion | truncatechars:100 }}</p>
+          <a href="media/{{ value.archivo }}" target="_blank" class="btn btn-primary">VER</a>
+        </div>
+      </div>
+
+    {% endfor %}
+
+  </div>
+</div><!-- /.container -->

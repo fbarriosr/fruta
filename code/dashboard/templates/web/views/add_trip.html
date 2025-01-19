@@ -1,0 +1,85 @@
+{% extends "web/root/origin.html" %}
+{% load static %}
+
+{% block title %}
+  {{ nameWeb }} | {{ title }}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="page-inner">
+        <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+            <div>
+                <h3 class="fw-bold mb-3">{{ title }}</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Add New Trip</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if error %}
+                        <div class="alert alert-danger">
+                            {{ error }}
+                        </div>
+                        {% endif %}
+                        <form method="post" action="">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="license_plate">License Plate</label>
+                                <input type="text" name="license_plate" id="license_plate" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="shipment">Shipment</label>
+                                <input type="text" name="shipment" id="shipment" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="driver">Driver</label>
+                                <input type="text" name="driver" id="driver" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="origin">Origin</label>
+                                <input type="text" name="origin" id="origin" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="destination">Destination</label>
+                                <input type="text" name="destination" id="destination" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="departure_date">Departure Date</label>
+                                <input type="datetime-local" name="departure_date" id="departure_date" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="arrival_date">Arrival Date</label>
+                                <input type="datetime-local" name="arrival_date" id="arrival_date" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product">Product Type</label>
+                                <select name="product" id="product" class="form-control">
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}">{{ product.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="microorganisms">Microorganisms</label>
+                                <select name="microorganisms" id="microorganisms" class="form-control">
+                                    {% for microorganism in microorganisms %}
+                                    <option value="{{ microorganism.id }}">{{ microorganism.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="card-action">
+                                <button type="submit" class="btn btn-success">Save</button>
+                                <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
