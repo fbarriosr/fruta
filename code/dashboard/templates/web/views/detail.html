@@ -12,20 +12,6 @@
     <p>{{ sensor.description }}</p>
 
     <div class="row">
-      <!-- Decision Messages -->
-      <div class="col-sm-6 col-md-6">
-        <div class="card card-stats card-round">
-          <div class="card-header">
-            <h4 class="card-title">Decision Messages</h4>
-          </div>
-          <div class="card-body">
-            <ul>
-               <li class="message">Mensaje por defecto</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       <!-- Time and Temperature Stats -->
       <div class="col-sm-6 col-md-6">
         <div class="card card-stats card-round">
@@ -46,7 +32,8 @@
             </div>
           </div>
         </div>
-
+      </div>
+      <div class="col-sm-6 col-md-6">
         <div class="card card-stats card-round">
           <div class="card-body">
             <div class="row align-items-center">
@@ -63,7 +50,6 @@
               </div>
             </div>
           </div>
-
           <div class="card-body">
             <div class="row align-items-center">
               <div class="col-icon">
@@ -79,8 +65,6 @@
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
 
@@ -88,7 +72,30 @@
       <div class="col-md-12">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Analysis</div>
+            <div class="card-head-row">
+              <div class="card-title">Analysis</div>
+              <div class="card-tools">
+                <div class="dropdown" id ='export'>
+                  <button
+                    class="btn btn-sm  btn-primary dropdown-toggle"
+                    type="button"
+                    id="dropdownMenuButton"
+                    data-bs-toggle="dropdown"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                  >
+                    Export
+                  </button>
+                  <div
+                    class="dropdown-menu"
+                    aria-labelledby="dropdownMenuButton"
+                  >
+                    <a class="dropdown-item" href="{% url 'api_export_temperatures_limits_csv' sensor.id %}" id="exportUrl">csv</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="message"></div>
           </div>
           <div class="card-body text-center">
             <!-- Spinner de carga -->
@@ -113,8 +120,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     const apiUrl = "{% url 'api_generate_temperatures_limits' sensor.id %}";
     const imgElement = document.getElementById('sensor-graph');
-    const messageElement = document.querySelector('li.message');
-    
+  const messageElement = document.getElementById('message');
     const loadingSpinner = document.getElementById('loading-spinner');
 
     fetchGraphAndMessage(apiUrl);

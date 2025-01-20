@@ -13,16 +13,37 @@
 
     <div class="row">
       <!-- Decision Messages -->
+
       <div class="col-sm-6 col-md-6">
         <div class="card card-stats card-round">
           <div class="card-header">
-            <h4 class="card-title">Decision Messages</h4>
-          </div>
+            <div class="card-head-row">
+                <div class="card-title">{{ message }} </div>
+                <div class="card-tools">
+                    <ul class="nav nav-pills nav-secondary nav-pills-no-bd nav-sm" id="pills-tab" role="tablist">
+                        <li class="nav-item submenu" role="presentation">
+                            {% if message == "SHIPMENT ACCEPTED" %}
+                            <button class="btn btn-success" disabled>
+                                Accepted <i class="fas fa-thumbs-up"></i>
+                            </button>
+                            {% elif message == "SHIPMENT REJECTED" %}
+                            <button class="btn btn-danger" disabled>
+                                Rejected <i class="fas fa-thumbs-down"></i>
+                            </button>
+                            {% elif message == "SHIPMENT ANALYSIS" %}
+                            <button class="btn btn-info" disabled>
+                                Analysing <i id="iconAnalysis" class="fas far fa-hourglass"></i>
+                            </button>
+                            {% endif %} 
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
           <div class="card-body">
             <ul>
-              <li>{{ message }}</li>
               <li>{{ description }}</li> 
-               <li class="message">Mensaje por defecto</li>
             </ul>
           </div>
         </div>
@@ -103,9 +124,32 @@
 
       <!-- Graph Image -->
       <div class="col-md-12">
-        <div class="card">
+        <div class="card card-round ">
           <div class="card-header">
-            <div class="card-title">Analysis</div>
+            <div class="card-head-row">
+              <div class="card-title">Analysis</div>
+              <div class="card-tools">
+                <div class="dropdown" id ='export'>
+                  <button
+                    class="btn btn-sm  btn-primary dropdown-toggle"
+                    type="button"
+                    id="dropdownMenuButton"
+                    data-bs-toggle="dropdown"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                  >
+                    Export
+                  </button>
+                  <div
+                    class="dropdown-menu"
+                    aria-labelledby="dropdownMenuButton"
+                  >
+                    <a class="dropdown-item" href="api_export_temperatures_limits_csv" id="exportUrl">csv</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="message"></div>
           </div>
           <div class="card-body text-center">
             <!-- Spinner de carga -->
@@ -132,18 +176,30 @@
     const apiUrl = "{% url 'api_generate_graph' sensor.id %}";
     const apiUrlUp = "{% url 'api_generate_temperatures_up' sensor.id %}";
     const apiUrlLow = "{% url 'api_generate_temperatures_low' sensor.id %}";
+
+    const apiUrlExport = "{% url 'api_export_csv_analysis' sensor.id %}";
+    const apiUrlExportUp = "{% url 'api_export_temperatures_up_csv' sensor.id %}";
+    const apiUrlExportLow = "{% url 'api_export_temperatures_low_csv' sensor.id %}";
+
     const imgElement = document.getElementById('sensor-graph');
-    const messageElement = document.querySelector('li.message');
+    const messageElement = document.getElementById('message');
     const t_h_at_max_lpaElement = document.getElementById('t_h_at_max_lpa');
     
     const loadingSpinner = document.getElementById('loading-spinner');
+    const icon = document.getElementById('iconAnalysis');
+    const exportBtn = document.getElementById('export');
+    exportBtn.style.display = 'none'; // Oculta el botón
+ 
 
     if (doAction === "graficar_algoritmo") {
         // Lógica para graficar algoritmo
+        document.getElementById('exportUrl').href = apiUrlExport
         fetchGraphAndMessage(apiUrl);
     }else if( doAction === "api_generate_temperatures_up"){
+        document.getElementById('exportUrl').href = apiUrlExportUp
         fetchGraphAndMessage(apiUrlUp);
     }else if( doAction === "api_generate_temperatures_low"){
+        document.getElementById('exportUrl').href = apiUrlExportLow
         fetchGraphAndMessage(apiUrlLow);
     }else {
         // Ocultar el spinner si no se debe graficar nada
@@ -171,6 +227,8 @@
 
                 // Ocultar el spinner
                 loadingSpinner.style.display = 'none';
+                exportBtn.style.display = 'block'; // muestra el botón
+                icon.classList.replace('fa-hourglass', 'fa-check-circle'); 
             })
             .catch(error => {
                 console.error('Error:', error);

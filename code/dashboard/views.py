@@ -1,4 +1,5 @@
 import chardet
+import csv
 import locale
 from django.utils.timezone import localtime
 import pandas as pd
@@ -169,8 +170,8 @@ class DetailViewSensor(DetailView):
             data = [record.temperature for record in records]
 
             context.update({
-                'min_temp': min_temp,
-                'max_temp': max_temp,
+                'min_temp': round(min_temp, 2),
+                'max_temp': round(max_temp, 2),
                 'total_records': total_records,
                 'min_date': min_date,
                 'max_date': max_date,
@@ -399,20 +400,19 @@ class AnalysisViewSensor(DetailView):
                 description = f"SHIPMENT ACCEPTED: For more than {pTemLow}% of the shipping time, the temperature remained below the lower threshold of {TemLimLow}."
                 do = "api_generate_temperatures_low"
             else:
-                message = 'ANALYZING SHIPMENT'
+                message = 'SHIPMENT ANALYSIS'
                 description = "The algorithm and the mathematical model are being executed to analyze the shipment."
                 do = "graficar_algoritmo"
                 
-            #do = "api_generate_temperatures_low"
             # Actualizar contexto
             context.update({
-                "min_temp": min_temp,
-                "max_temp": max_temp,
+                "min_temp": round(min_temp, 2),
+                "max_temp": round(max_temp, 2),
                 "total_records": total_records,
                 "min_date": min_date,
                 "max_date": max_date,
-                "decimal_days": decimal_days,
-                "decimal_hours": decimal_hours,
+                "decimal_days": round(decimal_days, 2),
+                "decimal_hours": round(decimal_hours, 2),
                 "message":message,
                 "description":description,
                 "do": do, 
@@ -583,7 +583,7 @@ class Analysis:
             # Crear máscara
             mask = df.index[df['LPA'] >= 1]
             
-            t_h_at_max_lpa = str(round(df['t_h'].iloc[mask[0]],self.cifra))+' hours'
+            t_h_at_max_lpa = str(round(df['t_h'].iloc[mask[0]],2))+' hours'
 
             if len(mask) > 1:
                 i = mask[1]
@@ -703,7 +703,7 @@ class Analysis:
             'mRPI': df['mRPI'].tolist(),
             'T': df['temperature'],
             'title': aux,
-            't_h_at_max_lpa':t_h_at_max_lpa
+            't_h_at_max_lpa': t_h_at_max_lpa
         }
         return context
 
@@ -824,7 +824,7 @@ def api_generate_graph(request, pk):
 
     # Retornar imagen codificada y texto en JSON
     return JsonResponse({
-        "message": "Analysis generated successfully.",
+        "message": "Generated successfully.",
         "image": image_base64,
         "t_h_at_max_lpa": context['t_h_at_max_lpa']
     })
@@ -1100,6 +1100,161 @@ def api_generate_temperatures_limits(request, pk):
             "message": "Temperature vs Time graph with limits generated successfully.",
             "image": image_base64
         })
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+
+
+def api_export_csv_analysis(request, pk):
+    """
+    Exporta los datos de análisis del sensor especificado por su ID en formato CSV.
+    """
+    # Obtener el sensor
+    sensor = get_object_or_404(Sensor, id=pk)
+
+    # Generar el análisis
+    analysis_view = Analysis(sensor=sensor)
+    context = analysis_view.get_context_data()
+
+    # Crear la respuesta HTTP con encabezado para CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="sensor_{pk}_analysis.csv"'
+
+    # Crear el escritor CSV
+    writer = csv.writer(response)
+
+    # Escribir encabezados
+    writer.writerow(['t', 'LPA', 'RPI', 'mRPI', 'T'])
+
+    # Escribir los datos
+    for t, lpa, rpi, mrpi, t_value in zip(
+        context['t'], context['LPA'], context['RPI'], context['mRPI'], context['T']
+    ):
+        writer.writerow([t, lpa, rpi, mrpi, t_value])
+
+    # Retornar la respuesta
+    return response
+
+
+def api_export_temperatures_up_csv(request, pk):
+    """
+    Exporta los registros de temperatura de un sensor específico en formato CSV,
+    incluyendo el límite superior de temperatura (TemLimUp).
+    """
+    try:
+        # Obtener el sensor por su ID
+        sensor = get_object_or_404(Sensor, id=pk)
+
+        # Obtener los registros asociados al sensor
+        records = sensor.records.order_by('time')
+        if not records.exists():
+            return JsonResponse({"error": "No records found for the specified sensor."}, status=404)
+
+        # Obtener el valor de TemLimUp desde los parámetros
+        tem_lim_up_param = Parameters.objects.filter(name='max_temp').first()
+        if not tem_lim_up_param:
+            return JsonResponse({"error": "TemLimUp parameter not found."}, status=404)
+
+        TemLimUp = tem_lim_up_param.value
+
+        # Crear la respuesta HTTP con tipo de contenido CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename=\"sensor_{sensor.id}_data_with_limit.csv\"'
+
+        # Crear un escritor CSV
+        writer = csv.writer(response)
+
+        # Escribir el encabezado del archivo CSV
+        writer.writerow(['Time', 'Temperature (°C)', 'Temperature Limit (°C)'])
+
+        # Escribir los registros con TemLimUp
+        for record in records:
+            writer.writerow([record.time, record.temperature, TemLimUp])
+
+        return response
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+def api_export_temperatures_low_csv(request, pk):
+    """
+    Exporta los registros de temperatura de un sensor específico en formato CSV,
+    incluyendo el límite inferior de temperatura (TemLimLow).
+    """
+    try:
+        # Obtener el sensor por su ID
+        sensor = get_object_or_404(Sensor, id=pk)
+
+        # Obtener los registros asociados al sensor
+        records = sensor.records.order_by('time')
+        if not records.exists():
+            return JsonResponse({"error": "No records found for the specified sensor."}, status=404)
+
+        # Obtener el valor de TemLimLow desde los parámetros
+        tem_lim_low_param = Parameters.objects.filter(name='min_temp').first()
+        if not tem_lim_low_param:
+            return JsonResponse({"error": "TemLimLow parameter not found."}, status=404)
+
+        TemLimLow = tem_lim_low_param.value
+
+        # Crear la respuesta HTTP con tipo de contenido CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="sensor_{sensor.id}_data_with_low_limit.csv"'
+
+        # Crear un escritor CSV
+        writer = csv.writer(response)
+
+        # Escribir el encabezado del archivo CSV
+        writer.writerow(['Time', 'Temperature (°C)', 'Temperature Low Limit (°C)'])
+
+        # Escribir los registros con TemLimLow
+        for record in records:
+            writer.writerow([record.time, record.temperature, TemLimLow])
+
+        return response
+
+    except Exception as e:
+        return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+def api_export_temperatures_limits_csv(request, pk):
+    """
+    Exporta los registros de temperatura de un sensor específico en formato CSV,
+    incluyendo los límites inferior (TemLimLow) y superior (TemLimUp) de temperatura.
+    """
+    try:
+        # Obtener el sensor por su ID
+        sensor = get_object_or_404(Sensor, id=pk)
+
+        # Obtener los registros asociados al sensor
+        records = sensor.records.order_by('time')
+        if not records.exists():
+            return JsonResponse({"error": "No records found for the specified sensor."}, status=404)
+
+        # Obtener los valores de TemLimLow y TemLimUp desde los parámetros
+        tem_lim_low_param = Parameters.objects.filter(name='min_temp').first()
+        tem_lim_up_param = Parameters.objects.filter(name='max_temp').first()
+        if not tem_lim_low_param or not tem_lim_up_param:
+            return JsonResponse({"error": "Temperature limit parameters not found."}, status=404)
+
+        TemLimLow = tem_lim_low_param.value
+        TemLimUp = tem_lim_up_param.value
+
+        # Crear la respuesta HTTP con tipo de contenido CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="sensor_{sensor.id}_data_with_limits.csv"'
+
+        # Crear un escritor CSV
+        writer = csv.writer(response)
+
+        # Escribir el encabezado del archivo CSV
+        writer.writerow(['Time', 'Temperature (°C)', 'Temperature Low Limit (°C)', 'Temperature High Limit (°C)'])
+
+        # Escribir los registros con TemLimLow y TemLimUp
+        for record in records:
+            writer.writerow([record.time, record.temperature, TemLimLow, TemLimUp])
+
+        return response
 
     except Exception as e:
         return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
