@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  db:
+    container_name: db_frutas
+    image: postgres:15
+    restart: always
+    volumes:
+      - ./code/data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx_proxy_cgm
+    restart: always
+    ports: 
+      - "80:80"
+      - "443:443"
+    volumes: 
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /home/certs:/etc/nginx/certs:ro
+      - /usr/share/nginx/html
+      - ./vhost.d:/etc/nginx/vhost.d
+    environment:
+      - NGINX_TEMPLATE=/etc/docker-gen/templates/nginx.tmpl
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt_cgm
+    restart: always
+    volumes:
+      - /home/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    volumes_from:
+      - nginx-proxy:rw
+
+  web:
+    container_name: web_frutas
+    restart: always
+    build: ./code
+    image: frutas:tag
+    command: python manage.py runserver 0.0.0.0:80
+    volumes:
+      - ./code:/code
+    expose:
+      - "80"
+    environment:
+      - VIRTUAL_HOST=frutas.tanucode.cl
+      - LETSENCRYPT_HOST=frutas.tanucode.cl
+      - LETSENCRYPT_EMAIL=admin@tanucode.cl
+    depends_on:
+      - db
+

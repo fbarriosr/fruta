@@ -174,14 +174,32 @@ def initialize_data():
         microorganism=microorganism  # Relaciona con Microorganism PSYCHROPHILES
     )
 
+
     Trip.objects.get_or_create(
         shipment="1",
         license_plate="EJTO 45",
         driver="Fran",
         origin="Chicago, Illinois",
-        destination="HMiami, Florida",
+        destination="Miami, Florida",
         departure_date=current_tz.localize(datetime(2023, 10, 31, 0, 23, 4)),
         arrival_date=current_tz.localize(datetime(2023, 11, 1, 6, 18, 54)),
+        product=product,  # Relaciona con ProductType UNTREATED
+        microorganism=microorganism  # Relaciona con Microorganism PSYCHROPHILES
+    )
+
+    microorganism = Microorganism.objects.get(name='PSYCHROPHILES')
+    product = ProductType.objects.get(name='OHMIC_HEATING')
+
+
+
+    Trip.objects.get_or_create(
+        shipment="2",
+        license_plate="EJTO 165",
+        driver="Fran",
+        origin="Houston, Texas",
+        destination="Los Ángeles, California",
+        departure_date=current_tz.localize(datetime(2023, 11, 20, 3, 4, 8)),
+        arrival_date=current_tz.localize(datetime(2023, 11, 21, 8, 59, 58)),
         product=product,  # Relaciona con ProductType UNTREATED
         microorganism=microorganism  # Relaciona con Microorganism PSYCHROPHILES
     )

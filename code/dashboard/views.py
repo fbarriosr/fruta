@@ -40,6 +40,7 @@ class DetailViewTrip(DetailView):
         page_obj = paginator.get_page(page_number)
         context['trip'] = trip
         context['sensors'] = page_obj
+        
         return context
 
 
@@ -92,7 +93,7 @@ class AddTrip(View):
                 departure_date=departure_date,
                 arrival_date=arrival_date,
                 product=product,
-                microorganisms=microorganism,
+                microorganism=microorganism,
             )
             trip.save()
 
@@ -170,13 +171,13 @@ class DetailViewSensor(DetailView):
             data = [record.temperature for record in records]
 
             context.update({
-                'min_temp': round(min_temp, 2),
-                'max_temp': round(max_temp, 2),
+                'min_temp': str(round(min_temp, 2)).replace(",", "."),
+                'max_temp': str(round(max_temp, 2)).replace(",", "."),
                 'total_records': total_records,
                 'min_date': min_date,
                 'max_date': max_date,
-                'decimal_days': round(decimal_days, 2),
-                'decimal_hours': round(decimal_hours, 2),
+                'decimal_days': str(round(decimal_days, 2)).replace(",", "."),
+                'decimal_hours': str(round(decimal_hours, 2)).replace(",", "."),
                 'labels': labels,
                 'data': data,
             })
@@ -200,6 +201,9 @@ class DetailViewSensor(DetailView):
 
         context["nameWeb"] = nameWeb
         context["title"] = f"Sensor Details {self.object.serial_number}"
+        context['LimitTemperatureUp']   = Parameters.objects.filter(name='max_temp').first().value
+        context['LimitTemperatureDown'] = Parameters.objects.filter(name='min_temp').first().value
+       
         return context
 
 
@@ -388,8 +392,8 @@ class AnalysisViewSensor(DetailView):
             values = records.values_list('number', 'time', 'temperature')
             df = pd.DataFrame(list(values), columns=['number', 'time', 'temperature'])
 
-            pTemUp = (sum(df['temperature'] > TemLimUp) / len(df['temperature'])) * 100
-            pTemLow = (sum(df['temperature'] < TemLimLow) / len(df['temperature'])) * 100
+            pTemUp = np.round((sum(df['temperature'] > TemLimUp) / len(df['temperature'])) * 100, 2)
+            pTemLow = np.round((sum(df['temperature'] < TemLimLow) / len(df['temperature'])) * 100,2)
 
             if pTemUp > pTemLimUp:
                 message = 'SHIPMENT REJECTED'
@@ -406,16 +410,17 @@ class AnalysisViewSensor(DetailView):
                 
             # Actualizar contexto
             context.update({
-                "min_temp": round(min_temp, 2),
-                "max_temp": round(max_temp, 2),
+                "min_temp": str(round(min_temp, 2)).replace(",", "."),
+                "max_temp": str(round(max_temp, 2)).replace(",", "."),
                 "total_records": total_records,
                 "min_date": min_date,
                 "max_date": max_date,
-                "decimal_days": round(decimal_days, 2),
-                "decimal_hours": round(decimal_hours, 2),
+                "decimal_days": str(round(decimal_days, 2)).replace(",", "."),
+                "decimal_hours": str(round(decimal_hours, 2)).replace(",", "."),
                 "message":message,
                 "description":description,
                 "do": do, 
+                "object": self.object
             })
 
         else:
@@ -434,7 +439,9 @@ class AnalysisViewSensor(DetailView):
 
         context["nameWeb"] = nameWeb
         context["title"] = f"Sensor Details {self.object.serial_number}"
-
+        context['LimitTemperatureUp']   = Parameters.objects.filter(name='max_temp').first().value
+        context['LimitTemperatureDown'] = Parameters.objects.filter(name='min_temp').first().value
+       
         return context
 
 class Analysis:
@@ -583,9 +590,16 @@ class Analysis:
             # Crear máscara
             mask = df.index[df['LPA'] >= 1]
             
-            t_h_at_max_lpa = str(round(df['t_h'].iloc[mask[0]],2))+' hours'
-
+            if len(mask) == 0: # LPA < 1
+                max_position = df['LPA'].idxmax()
+                t_h_at_max_lpa = str(round(df['t_h'].loc[max_position],2))+' hours'  # valor th de LPA <1
+                t_h_at_max_lpa_porcent = str(round(float(df['LPA'].iloc[max_position])*100,0))+ ' %'
+                message = 'SHIPMENT ACCEPTED'
+                df['RPI'] = pd.NA
+                df['mRPI'] = pd.NA
             if len(mask) > 1:
+                t_h_at_max_lpa = str(round(df['t_h'].iloc[mask[0]],2))+' hours'  # valor th de LPA =1
+                t_h_at_max_lpa_porcent = str(round(float(df['LPA'].iloc[mask[0]])*100,0))+ ' %'
                 i = mask[1]
                 mT_2 = df.at[i, 'mT']
                 dt_2 = df.at[i, 'dt']
@@ -612,7 +626,7 @@ class Analysis:
                     df.at[i, 'n'] = n_2
 
                     # Modelo original
-                    logN_2 = round(b_2 * (dt_2 ** n_2), self.cifra)
+                    logN_2 = round(b_2 * (( dt_2 +1/24 )** n_2), self.cifra)
                     df.at[i, 'logN'] = logN_2
 
                     # Modelo compuesto
@@ -622,7 +636,7 @@ class Analysis:
                     # RPI
                     RPI_2 = round(logN_2 / logNc_2, self.cifra) if logNc_2 > 0 else pd.NA
                     df.at[i, 'RPI'] = RPI_2
-                    max_temp = str(RPI_2)+'-'+str(i)+'-'+str(logN_2)+'-'+str(logNc_2)
+                    max_temp = str(RPI_2)+'-'+str(i)+'-'+str(logN_2)+'-'+str(logNc_2)    
             # Procesar posiciones 3 en adelante  
             if len(mask) > 2:
                 indices = mask[2:]
@@ -691,7 +705,14 @@ class Analysis:
                         mRPI = pd.NA
 
                     df.at[i, 'mRPI'] = mRPI
-           
+                
+                ultimo_valor = mask[-1]
+                if df.loc[ultimo_valor, 'RPI']  <= 1:
+                    message = 'SHIPMENT ACCEPTED'
+                else:
+                    message = 'SHIPMENT REJECTED'
+
+
             # Convertir valores de LPA > 1 a pd.NA
             df.loc[df['LPA'] > 1, 'LPA'] = pd.NA
         
@@ -703,7 +724,9 @@ class Analysis:
             'mRPI': df['mRPI'].tolist(),
             'T': df['temperature'],
             'title': aux,
-            't_h_at_max_lpa': t_h_at_max_lpa
+            't_h_at_max_lpa': t_h_at_max_lpa,
+            't_h_at_max_lpa_porcent': t_h_at_max_lpa_porcent,
+            'message': message
         }
         return context
 
@@ -721,11 +744,21 @@ class Analysis:
         # Crear una figura con múltiples trazas (líneas)
         # Definir trazos y colores
         traces = [
-            {"name": "LPA", "y": LPA, "color": "green", "dash": "solid", "yaxis": "y1"},
-            {"name": "RPI", "y": RPI, "color": "red", "dash": "solid", "yaxis": "y1"},
+            {"name": "LPA", "y": LPA, "color": "purple", "dash": "solid", "yaxis": "y1"},
+            {"name": "RPI", "y": RPI, "color": "purple", "dash": "dash", "yaxis": "y1"},
             {"name": "mRPI", "y": mRPI, "color": "orange", "dash": "dot", "yaxis": "y1"},
-            {"name": "Temperature", "y": T, "color": "blue", "dash": "solid", "yaxis": "y2"}
+            {"name": "Temperature", "y": T, "color": "green", "dash": "solid", "yaxis": "y2"}
         ]
+
+        # Obtener los valores de TemLimLow y TemLimUp desde los parámetros
+        tem_lim_low_param = Parameters.objects.filter(name='min_temp').first()
+        tem_lim_up_param = Parameters.objects.filter(name='max_temp').first()
+        if not tem_lim_low_param or not tem_lim_up_param:
+            return JsonResponse({"error": "Temperature limit parameters not found."}, status=404)
+
+        TemLimLow = tem_lim_low_param.value
+        TemLimUp = tem_lim_up_param.value
+
 
         # Crear figura y agregar trazos
         fig = go.Figure()
@@ -738,6 +771,24 @@ class Analysis:
                 yaxis=trace["yaxis"]
             ))
 
+        # Trazar el límite superior de temperatura
+        fig.add_trace(go.Scatter(
+            x=t, 
+            y=[TemLimUp] * len(t), 
+            mode='lines',
+            name='TemLimUp',
+            line=dict(color='red', dash='dash'),
+            yaxis=trace["yaxis"]
+        ))
+        # Trazar el límite superior de temperatura
+        fig.add_trace(go.Scatter(
+            x=t, 
+            y=[TemLimLow] * len(t), 
+            mode='lines',
+            name='TemLimLow',
+            line=dict(color='blue', dash='dash'),
+            yaxis=trace["yaxis"]
+        ))
         # Configuración del diseño
         layout = dict(
             title=dict(
@@ -754,21 +805,21 @@ class Analysis:
                 tickfont=dict(size=24)
             ),
             yaxis=dict(
-                title="RPI and LPA",
+                title="LPA, RPI and mRPI",
                 range=[0, 3],
                 dtick=0.5,
-                titlefont=dict(color="green", size=28),
-                tickfont=dict(size=24, color="green"),
+                titlefont=dict(color="purple", size=28),
+                tickfont=dict(size=24, color="purple"),
                 showgrid=True,
                 zeroline=False,
                 side="left"
             ),
             yaxis2=dict(
                 title="Temperature (°C)",
-                range=[0, 12],
+                range=[0, 20],
                 dtick=2,
-                titlefont=dict(color="blue", size=28),
-                tickfont=dict(size=24, color="blue"),
+                titlefont=dict(color="green", size=28),
+                tickfont=dict(size=24, color="green"),
                 overlaying="y",
                 side="right",
                 showgrid=False,
@@ -826,7 +877,9 @@ def api_generate_graph(request, pk):
     return JsonResponse({
         "message": "Generated successfully.",
         "image": image_base64,
-        "t_h_at_max_lpa": context['t_h_at_max_lpa']
+        "t_h_at_max_lpa": context['t_h_at_max_lpa'],
+        't_h_at_max_lpa_porcent': context['t_h_at_max_lpa_porcent'],
+        'message': context['message']
     })
 
 def api_generate_temperatures_up(request, pk):
@@ -1041,7 +1094,7 @@ def api_generate_temperatures_limits(request, pk):
             y=temperatures, 
             mode='lines',
             name='Temperature',
-            line=dict(color='blue')
+            line=dict(color='green')
         ))
 
         # Trazar el límite inferior de temperatura
@@ -1050,7 +1103,7 @@ def api_generate_temperatures_limits(request, pk):
             y=[TemLimLow] * len(times), 
             mode='lines',
             name='TemLimLow',
-            line=dict(color='green', dash='dash')
+            line=dict(color='blue', dash='dash')
         ))
 
         # Trazar el límite superior de temperatura
@@ -1104,8 +1157,6 @@ def api_generate_temperatures_limits(request, pk):
     except Exception as e:
         return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
 
-
-
 def api_export_csv_analysis(request, pk):
     """
     Exporta los datos de análisis del sensor especificado por su ID en formato CSV.
@@ -1117,6 +1168,15 @@ def api_export_csv_analysis(request, pk):
     analysis_view = Analysis(sensor=sensor)
     context = analysis_view.get_context_data()
 
+    # Obtener los valores de TemLimLow y TemLimUp desde los parámetros
+    tem_lim_low_param = Parameters.objects.filter(name='min_temp').first()
+    tem_lim_up_param = Parameters.objects.filter(name='max_temp').first()
+    if not tem_lim_low_param or not tem_lim_up_param:
+        return JsonResponse({"error": "Temperature limit parameters not found."}, status=404)
+
+    TemLimLow = tem_lim_low_param.value
+    TemLimUp = tem_lim_up_param.value
+
     # Crear la respuesta HTTP con encabezado para CSV
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="sensor_{pk}_analysis.csv"'
@@ -1125,15 +1185,19 @@ def api_export_csv_analysis(request, pk):
     writer = csv.writer(response)
 
     # Escribir encabezados
-    writer.writerow(['t', 'LPA', 'RPI', 'mRPI', 'T'])
+    writer.writerow(['t', 'LPA', 'RPI', 'mRPI', 'T','Temperature Low Limit (°C)', 'Temperature High Limit (°C)'])
 
-    # Escribir los datos
-    for t, lpa, rpi, mrpi, t_value in zip(
-        context['t'], context['LPA'], context['RPI'], context['mRPI'], context['T']
-    ):
-        writer.writerow([t, lpa, rpi, mrpi, t_value])
+    # Convertir los datos a arrays numpy y reemplazar NaN con 0
+    data_arrays = [
+        np.array(context[key], dtype=np.float64) for key in ['t', 'LPA', 'RPI', 'mRPI', 'T']
+    ]
+    data_arrays = [np.nan_to_num(arr) for arr in data_arrays]
 
-    # Retornar la respuesta
+    # Escribir los datos al archivo CSV
+    for row in zip(*data_arrays):
+        writer.writerow(list(row) + [TemLimLow, TemLimUp])
+
+     # Retornar la respuesta
     return response
 
 

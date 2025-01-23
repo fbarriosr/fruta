@@ -35,9 +35,9 @@ class DecisionMessageAdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
 # Configure admin for the Sensor model
 @admin.register(Sensor)
 class SensorAdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
-    search_fields = ["serial_number"]  # Search fields
+    search_fields = ["serial_number","trip"]  # Search fields
     list_display = ("serial_number", 'tag', "device", "pallet_location", "sensor_position")  # Updated visible fields
-    list_filter = ('pallet_location', 'sensor_position')  # Filters by related fields
+    list_filter = ('trip', 'sensor_position','pallet_location')  # Filters by related fields
     actions = [delete_selected_efficiently]  # Add custom action
     list_per_page = 10  # Number of records per page
 

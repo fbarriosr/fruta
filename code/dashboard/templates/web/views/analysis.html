@@ -12,45 +12,63 @@
     <p>{{ sensor.description }}</p>
 
     <div class="row">
-      <!-- Decision Messages -->
 
-      <div class="col-sm-6 col-md-6">
-        <div class="card card-stats card-round">
-          <div class="card-header">
-            <div class="card-head-row">
-                <div class="card-title">{{ message }} </div>
-                <div class="card-tools">
-                    <ul class="nav nav-pills nav-secondary nav-pills-no-bd nav-sm" id="pills-tab" role="tablist">
-                        <li class="nav-item submenu" role="presentation">
-                            {% if message == "SHIPMENT ACCEPTED" %}
-                            <button class="btn btn-success" disabled>
-                                Accepted <i class="fas fa-thumbs-up"></i>
-                            </button>
-                            {% elif message == "SHIPMENT REJECTED" %}
-                            <button class="btn btn-danger" disabled>
-                                Rejected <i class="fas fa-thumbs-down"></i>
-                            </button>
-                            {% elif message == "SHIPMENT ANALYSIS" %}
-                            <button class="btn btn-info" disabled>
-                                Analysing <i id="iconAnalysis" class="fas far fa-hourglass"></i>
-                            </button>
-                            {% endif %} 
-                        </li>
-                    </ul>
-                </div>
+      <div class="col-sm-6 col-lg-2">
+        <p class="card-category">Trip Data </p>
+        <div class="card p-3">
+          <div class="d-flex align-items-center">
+            <span class="stamp stamp-md bg-warning me-3">
+              <i class="fa fa-luggage-cart"></i>
+            </span>
+            <div>
+              <h5 class="mb-1">
+                <b> 
+                <strong>Shipment:</strong> 
+                </b>
+                <small>{{ object.trip.shipment }}</small>
+              </h5>
             </div>
-        </div>
-
-          <div class="card-body">
-            <ul>
-              <li>{{ description }}</li> 
-            </ul>
           </div>
         </div>
       </div>
-
-      <!-- Time and Temperature Stats -->
-      <div class="col-sm-6 col-md-6">
+      <div class="col-sm-6 col-lg-3">
+        <p class="card-category">Trip Data </p>
+        <div class="card p-3">
+          <div class="d-flex align-items-center">
+            <span class="stamp stamp-md bg-warning me-3">
+              <i class="fa fa-archive"></i>
+            </span>
+            <div>
+              <h5 class="mb-1">
+                <b> 
+                <strong>Product:</strong> 
+                </b>
+                <small>{{ object.trip.product.description }}</small>
+              </h5>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <p class="card-category">Trip Data </p>
+        <div class="card p-3">
+          <div class="d-flex align-items-center">
+            <span class="stamp stamp-md bg-warning me-3">
+              <i class="fa fa-cookie"></i>
+            </span>
+            <div>
+              <h5 class="mb-1">
+                <b> 
+                <strong>Microorganism:</strong> 
+                </b>
+                <small>{{ object.trip.microorganism.description }}</small>
+              </h5>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <p class="card-category">Trip Data </p>
         <div class="card card-stats card-round">
           <div class="card-body">
             <div class="row align-items-center">
@@ -69,8 +87,11 @@
             </div>
           </div>
         </div>
-
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <p class="card-category">Sensor Data</p>
         <div class="card card-stats card-round">
+
           <div class="card-body">
             <div class="row align-items-center">
               <div class="col-icon">
@@ -102,8 +123,76 @@
               </div>
             </div>
           </div>
-          
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <p class="card-category">Parameters</p>
+        <div class="card card-stats card-round">
+
           <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-icon">
+                <div class="icon-big text-center icon-danger bubble-shadow-small">
+                  <i class="fas fa-thermometer-full"></i>
+                </div>
+              </div>
+              <div class="col col-stats ms-3 ms-sm-0">
+                <div class="numbers">
+                  <p class="card-category">Limit Temperature Up</p>
+                  <h4 class="card-title">{{ LimitTemperatureUp }}°C</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-icon">
+                <div class="icon-big text-center icon-primary bubble-shadow-small">
+                  <i class="fas fa-thermometer-empty"></i>
+                </div>
+              </div>
+              <div class="col col-stats ms-3 ms-sm-0">
+                <div class="numbers">
+                  <p class="card-category">Limit Temperature Down</p>
+                  <h4 class="card-title">{{ LimitTemperatureDown }}°C</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-md-6">
+        <p class="card-category">Message: </p>
+        <div class="card card-stats card-round">
+          <div class="card-header">
+            <div class="card-head-row">
+                <div class="card-title" >{{ message }} </div>
+                <div class="card-tools">
+                    <ul class="nav nav-pills nav-secondary nav-pills-no-bd nav-sm" id="pills-tab" role="tablist">
+                        <li class="nav-item submenu" role="presentation">
+                            {% if message == "SHIPMENT ACCEPTED" %}
+                            <button class="btn btn-success" disabled>
+                                Accepted <i class="fas fa-thumbs-up"></i>
+                            </button>
+                            {% elif message == "SHIPMENT REJECTED" %}
+                            <button class="btn btn-danger" disabled>
+                                Rejected <i class="fas fa-thumbs-down"></i>
+                            </button>
+                            {% elif message == "SHIPMENT ANALYSIS" %}
+                            <button class="btn btn-info" disabled id="btnAnalisis">
+                                Analysing <i id="iconAnalysis" class="fas far fa-hourglass"></i>
+                            </button>
+                            {% endif %} 
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="card-body" id="LPAMAXTIME_BTN">
             <div class="row align-items-center">
               <div class="col-icon">
                 <div class="icon-big text-center icon-warning bubble-shadow-small">
@@ -113,12 +202,14 @@
               <div class="col col-stats ms-3 ms-sm-0">
                 <div class="numbers">
                   <p class="card-category">LPA MAX TIME</p>
-                  <h4 class="card-title" id="t_h_at_max_lpa">{{ t_h_at_max_lpa }} hours</h4>
+                  <h4 class="card-title" id="t_h_at_max_lpa"> </h4>
                 </div>
               </div>
             </div>
-          </div>
-
+        </div>
+        <ul>
+              <li>{{ description }}</li> 
+            </ul>
         </div>
       </div>
 
@@ -187,8 +278,14 @@
     
     const loadingSpinner = document.getElementById('loading-spinner');
     const icon = document.getElementById('iconAnalysis');
+    const btnAnalisis = document.getElementById('btnAnalisis');
+
+
     const exportBtn = document.getElementById('export');
     exportBtn.style.display = 'none'; // Oculta el botón
+
+    const lpaMaxBtn = document.getElementById('LPAMAXTIME_BTN');
+
  
 
     if (doAction === "graficar_algoritmo") {
@@ -196,9 +293,12 @@
         document.getElementById('exportUrl').href = apiUrlExport
         fetchGraphAndMessage(apiUrl);
     }else if( doAction === "api_generate_temperatures_up"){
+        lpaMaxBtn.style.display = 'none'; // Oculta el botón
         document.getElementById('exportUrl').href = apiUrlExportUp
         fetchGraphAndMessage(apiUrlUp);
+
     }else if( doAction === "api_generate_temperatures_low"){
+        lpaMaxBtn.style.display = 'none'; // Oculta el botón
         document.getElementById('exportUrl').href = apiUrlExportLow
         fetchGraphAndMessage(apiUrlLow);
     }else {
@@ -223,12 +323,19 @@
 
                 // Asignar el mensaje
                 messageElement.textContent = data.message;
-                t_h_at_max_lpaElement.textContent = data.t_h_at_max_lpa
+                t_h_at_max_lpaElement.textContent =data.t_h_at_max_lpa_porcent  +' at ' + data.t_h_at_max_lpa;
 
                 // Ocultar el spinner
                 loadingSpinner.style.display = 'none';
                 exportBtn.style.display = 'block'; // muestra el botón
-                icon.classList.replace('fa-hourglass', 'fa-check-circle'); 
+
+                icon.classList.replace('fa-hourglass', 'fa-check-circle');
+                btnAnalisis.textContent = data.message;
+                if (data.message == 'SHIPMENT REJECTED'){
+                  btnAnalisis.classList.replace('btn-info', 'btn-danger');
+                }else if (data.message == 'SHIPMENT ACCEPTED'){
+                  btnAnalisis.classList.replace('btn-info', 'btn-primary');
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
