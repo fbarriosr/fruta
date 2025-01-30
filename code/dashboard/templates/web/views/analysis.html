@@ -207,9 +207,6 @@
               </div>
             </div>
         </div>
-        <ul>
-              <li>{{ description }}</li> 
-            </ul>
         </div>
       </div>
 
@@ -285,7 +282,7 @@
     exportBtn.style.display = 'none'; // Oculta el botón
 
     const lpaMaxBtn = document.getElementById('LPAMAXTIME_BTN');
-
+    const description = document.getElementById('description');
  
 
     if (doAction === "graficar_algoritmo") {
@@ -333,8 +330,10 @@
                 btnAnalisis.textContent = data.message;
                 if (data.message == 'SHIPMENT REJECTED'){
                   btnAnalisis.classList.replace('btn-info', 'btn-danger');
+                  btnAnalisis.textContent = btnAnalisis.textContent+" " +data.description;
                 }else if (data.message == 'SHIPMENT ACCEPTED'){
                   btnAnalisis.classList.replace('btn-info', 'btn-primary');
+                  btnAnalisis.textContent = btnAnalisis.textContent+" " +data.description;
                 }
             })
             .catch(error => {

@@ -90,7 +90,9 @@
                         <strong>From:</strong> {{ object.origin }}
                         </b>
                       </h5>
-                      <small class="text-muted">{{ object.departure_date|date:"Y-m-d H:i" }}</small>
+                      <small class="text-muted">
+                        {{ object.departure_date|date:"Y-m-d H:i" }} ({{ object.departure_timezone.value }})
+                      </small>
                     </div>
                   </div>
                 </div>
@@ -107,7 +109,9 @@
                         <strong>To:</strong> {{ object.destination }}
                         </b>
                       </h5>
-                      <small class="text-muted">{{ object.arrival_date|date:"Y-m-d H:i" }}</small>
+                      <small class="text-muted">
+                        {{ object.arrival_date|date:"Y-m-d H:i" }} ({{ object.arrival_timezone.value }})
+                      </small>
                     </div>
                   </div>
                 </div>
@@ -137,9 +141,10 @@
                                         <th>Serial Number</th>
                                         <th>Device</th>
                                         <th>Tag</th>
-                                        <th>Description</th>
                                         <th>Pallet Location</th>
-                                        <th>Sensor Position</th>
+                                        <th>Position</th>
+                                        <th>Tools</th>
+                                        <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -149,13 +154,37 @@
                                         <td>{{ sensor.serial_number }}</td>
                                         <td>{{ sensor.device }}</td>
                                         <td>{{ sensor.tag }}</td>
-                                        <td>{{ sensor.description }}</td>
                                         <td>{{ sensor.pallet_location.position }}</td>
                                         <td>{{ sensor.sensor_position.description }}</td>
                                         <td>
+                                          <button type="button" class="btn btn-danger delete-sensor-btn" data-sensor-id="{{ sensor.id }}">
+                                              Delete
+                                          </button>
+                                        </td>
+                                        <td>
+                                          {% if sensor.status.state == "Pending" %}
+                                          <button class="btn btn-secondary" disabled >
+                                           {{ sensor.status.state }}
+                                          </button>
+                                          {% elif sensor.status.state == "Rejected" %}
+                                          <button class="btn btn-danger" disabled >
+                                           {{ sensor.status.state }}
+                                          </button>
+                                          {% elif sensor.status.state == "Approved" %}
+                                          <button class="btn btn-success" disabled >
+                                           {{ sensor.status.state }}
+                                          </button>
+                                          {% elif sensor.status.state == "Analysis" %}
+                                          <button class="btn btn-primary" disabled >
+                                           {{ sensor.status.state }}
+                                          </button>
+                                          {% endif %}
+                                        </td>
+
+                                        <td>
                                             <!-- Enlace para ver detalles del sensor -->
-                                            <a href="{% url 'analysis' sensor.id %}" class="btn btn-success btn-sm">Analysis</a>
-                                            <a href="{% url 'detail' sensor.id %}" class="btn btn-info btn-sm">View Details</a>
+                                            <a href="{% url 'analysis' sensor.id %}" class="btn btn-success ">Analysis</a>
+                                            <a href="{% url 'detail' sensor.id %}" class="btn btn-info ">View Details</a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -187,4 +216,38 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extraJs %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".delete-sensor-btn").forEach(button => {
+        button.addEventListener("click", function () {
+            let sensorId = this.getAttribute("data-sensor-id");
+
+            if (!confirm("Are you sure you want to delete this sensor?")) return;
+
+            fetch(`/sensors/delete/${sensorId}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(data.message); // Mensaje de confirmación
+                    
+                    // Forzar recarga de la página para actualizar la lista
+                    window.location.href = window.location.href;
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error deleting sensor:", error));
+        });
+    });
+});
+</script>
 {% endblock %}

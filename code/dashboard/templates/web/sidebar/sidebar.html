@@ -38,13 +38,23 @@
           </a>
         </li>
         <!-- SENSORS -->
-        {% if 'detail' in request.path or 'analysis' in request.path or 'add_records' in request.path%}
+        {% if 'detail' in request.path or 'analysis' in request.path %}
         <li class="nav-item">
           <a href="{{ request.META.HTTP_REFERER|default:'#' }}">
             <i class="fas fa-tags"></i>
             <p>SENSORS</p>
           </a>
         </li>
+        {% endif %}
+        {% if 'add_records' in request.path %}
+            {% with pk=request.path|slice:"13:"|cut:"/" %}
+                <li class="nav-item">
+                  <a href="{% url 'detail_trip' pk %}">
+                    <i class="fas fa-tags"></i>
+                    <p>SENSORS</p>
+                  </a>
+                </li>
+            {% endwith %}
         {% endif %}
       </ul>
     </div>

@@ -14,22 +14,31 @@ def delete_selected_efficiently(modeladmin, request, queryset):
     messages.success(request, f"{num_deleted} records deleted successfully.")
 
 # Configure admin for the Record model
+@admin.register(TimeZoneChoices)
+class TimeZoneChoicesdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
+    search_fields = ["value"]  # Search fields
+    list_display = ("value",)  # Visible fields in the list
+    ordering = ["value"]
+    list_per_page = 10  # Number of records per page
+
+# Configure admin for the Record model
 @admin.register(Record)
 class RecordAdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
     search_fields = ["number"]  # Search fields
     list_display = ("sensor", "number", "time", "temperature")  # Visible fields in the list
-    list_filter = ('sensor',)
+    list_filter = ('sensor', 'sensor__trip')
     ordering = ["number"]
     actions = [delete_selected_efficiently]  # Add custom action
     list_per_page = 10  # Number of records per page
 
-# Configure admin for the Record model
-@admin.register(DecisionMessage)
-class DecisionMessageAdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
-    search_fields = ["decision"]  # Search fields
-    list_display = ("decision", "descripcion")  # Visible fields in the list
-    list_filter = ('decision',)
-    ordering = ["decision"]
+
+# Configure admin for the Status model
+@admin.register(Status)
+class StatusAdmin(SearchAutoCompleteAdmin, admin.ModelAdmin):
+    search_fields = ["state"]  # Search fields
+    list_display = ("state",)  # Visible fields in the list
+    list_filter = ("state",)
+    ordering = ["state"]
     list_per_page = 10  # Number of records per page
 
 # Configure admin for the Sensor model

@@ -1,48 +1,90 @@
-import chardet
+#  estándar de Python
 import csv
-import locale
-from django.utils.timezone import localtime
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from django.views import View
-from django.shortcuts import render, redirect
-from django.core.paginator import Paginator
-from django.views.generic import TemplateView, DetailView
-from django.utils.timezone import localtime, get_current_timezone
-from django.utils.dateformat import DateFormat
-from django.db.models import Min, Max, Count
-from .models import *
-from django.shortcuts import get_object_or_404
-import random
-from django.http import HttpResponse, Http404 
 import io
-import plotly.graph_objects as go
+import random
 import ast
 import base64
-from django.http import JsonResponse
+import re
+import locale
+from datetime import datetime, timedelta
 
+#  de terceros
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import chardet
+
+#  Django - Utilidades
+from django.utils.timezone import localtime, get_current_timezone
+from django.utils.dateformat import DateFormat
+from django.contrib import messages
+
+#  Django - Vistas y atajos
+from django.views import View
+from django.views.generic import TemplateView, DetailView
+from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
+
+#  Django - Modelos y respuestas HTTP
+from django.db.models import Min, Max, Count
+from django.http import HttpResponse, Http404, JsonResponse
+
+# Modelos locales
+from .models import *
 
 nameWeb = "Fresh Fruit"
+
+class DeleteSensorView(View):
+    def post(self, request, sensor_id):
+        """
+        Elimina un sensor y todos los registros asociados.
+        """
+        sensor = get_object_or_404(Sensor, id=sensor_id)
+
+        # Guardar información para mensaje
+        sensor_info = f"Sensor {sensor.serial_number} ({sensor.device})"
+        
+        # Eliminar el sensor (se eliminan los registros en cascada)
+        sensor.delete()
+
+        messages.success(request, f"{sensor_info} and all related records were deleted successfully.")
+        
+        return JsonResponse({"status": "success", "message": f"{sensor_info} deleted successfully."})
+
+class DeleteTripView(View):
+    def post(self, request, trip_id):
+        """
+        Elimina un Trip y todas sus referencias en cascada (sensores y registros).
+        """
+        trip = get_object_or_404(Trip, id=trip_id)
+
+        # Guardar información para mostrar mensaje
+        trip_info = f"{trip.license_plate} ({trip.departure_date} - {trip.arrival_date})"
+        
+        # Eliminar el trip (se eliminan los sensores y registros en cascada)
+        trip.delete()
+
+        messages.success(request, f"Trip {trip_info} and all related data were deleted successfully.")
+        
+        return JsonResponse({"status": "success", "message": f"Trip {trip_info} deleted successfully."})
 
 class DetailViewTrip(DetailView):
     model = Trip
     template_name = 'web/views/detail_trip.html'
-
+    npaginas = 5
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         trip = self.get_object()
         sensors = Sensor.objects.filter(trip=trip)
 
         # Configurar paginación
-        paginator = Paginator(sensors, 10)
+        paginator = Paginator(sensors, self.npaginas)
         page_number = self.request.GET.get('page')
         page_obj = paginator.get_page(page_number)
         context['trip'] = trip
         context['sensors'] = page_obj
         
         return context
-
 
 class AddTrip(View):
     template_name = "web/views/add_trip.html"
@@ -56,6 +98,7 @@ class AddTrip(View):
             "title": "Add Trip",
             "products": ProductType.objects.all(),
             "microorganisms": Microorganism.objects.all(),
+            "timezones": TimeZoneChoices.objects.all(),  # Pass timezone choices to the template
         }
         return render(request, self.template_name, context)
 
@@ -72,26 +115,32 @@ class AddTrip(View):
             destination = request.POST.get('destination')
             departure_date = request.POST.get('departure_date')
             arrival_date = request.POST.get('arrival_date')
+            departure_timezone_id = request.POST.get('departure_timezone')
+            arrival_timezone_id = request.POST.get('arrival_timezone')
             product_id = request.POST.get('product')
             microorganism_id = request.POST.get('microorganisms')
 
             # Validar que todos los campos requeridos estén presentes
-            if not all([license_plate, driver, origin, destination, departure_date, arrival_date, product_id, microorganism_id]):
+            if not all([license_plate, driver, origin, destination, departure_date, arrival_date, departure_timezone_id, arrival_timezone_id, product_id, microorganism_id]):
                 raise ValueError("All fields are required.")
 
-            # Obtener las relaciones de ProductType y Microorganism
+            # Obtener las relaciones de ProductType, Microorganism y TimeZoneChoices
             product = get_object_or_404(ProductType, id=product_id)
             microorganism = get_object_or_404(Microorganism, id=microorganism_id)
+            departure_timezone = get_object_or_404(TimeZoneChoices, id=departure_timezone_id)
+            arrival_timezone = get_object_or_404(TimeZoneChoices, id=arrival_timezone_id)
 
             # Crear y guardar el objeto Trip
             trip = Trip(
                 license_plate=license_plate,
                 driver=driver,
-                shipment= shipment,
+                shipment=shipment,
                 origin=origin,
                 destination=destination,
                 departure_date=departure_date,
+                departure_timezone=departure_timezone,
                 arrival_date=arrival_date,
+                arrival_timezone=arrival_timezone,
                 product=product,
                 microorganism=microorganism,
             )
@@ -106,6 +155,7 @@ class AddTrip(View):
                 "title": "Add Trip",
                 "products": ProductType.objects.all(),
                 "microorganisms": Microorganism.objects.all(),
+                "timezones": TimeZoneChoices.objects.all(),
                 "error": f"Validation Error: {ve}",
             }
             return render(request, self.template_name, context)
@@ -116,16 +166,17 @@ class AddTrip(View):
                 "title": "Add Trip",
                 "products": ProductType.objects.all(),
                 "microorganisms": Microorganism.objects.all(),
+                "timezones": TimeZoneChoices.objects.all(),
                 "error": f"Error saving trip: {e}",
             }
             return render(request, self.template_name, context)
 
 class Trips(TemplateView):
     template_name = "web/views/trips.html"
-
+    npaginas = 5
     def get_queryset(self):
         trips = Trip.objects.order_by('-arrival_date')
-        paginator = Paginator(trips, 10)
+        paginator = Paginator(trips, self.npaginas)
         page = self.request.GET.get('page')
         return paginator.get_page(page)
 
@@ -213,7 +264,7 @@ class RecordAdd(View):
     def get(self, request, trip_id, *args, **kwargs):
         trip = get_object_or_404(Trip, id=trip_id)
         context = {
-            "nameWeb": nameWeb,
+            "nameWeb": "Sensor Data Upload",
             "title": "Add Sensor Data",
             "trip": trip,
             "sensor_locations": SensorLocation.objects.all(),
@@ -229,68 +280,175 @@ class RecordAdd(View):
         sensor_tag = request.POST.get("sensor_tag", "").strip()
 
         if not uploaded_file:
-            context = self.get_context_with_error(trip, "No file uploaded!")
-            return render(request, self.template_name, context)
+            return self.get_context_with_error(trip, "No file uploaded!")
 
         if not pallet_location_id or not sensor_position_id:
-            context = self.get_context_with_error(trip, "Pallet Location and Sensor Position are required!")
-            return render(request, self.template_name, context)
+            return self.get_context_with_error(trip, "Pallet Location and Sensor Position are required!")
 
         try:
             raw_data = uploaded_file.read()
             detected_encoding = chardet.detect(raw_data)["encoding"] or "utf-8"
-            lines = raw_data.decode(detected_encoding).splitlines()
+            decoded_file = io.StringIO(raw_data.decode(detected_encoding))
+
+            file_extension = uploaded_file.name.split(".")[-1].lower()
 
             # Extraer información del sensor
-            device = "Unknown"
-            serial_number = "Unknown"
+            sensor_data = self.extract_sensor_info(decoded_file, file_extension)
+            if not sensor_data:
+                return self.get_context_with_error(trip, "Failed to extract sensor information!")
 
-            for line in lines:
-                line = line.strip()
-                if line.startswith("Modelo de dispositivo:") or line.startswith("Model :"):
-                    device = line.split(":", 1)[1].strip()
-                elif line.startswith("Número de serie:") or line.startswith("S/N :"):
-                    serial_number = line.split(":", 1)[1].strip()
-                elif line.startswith("No."):
-                    break
-
-            # Obtener ubicaciones
+            # Crear o actualizar el sensor
             pallet_location = get_object_or_404(PalletLocation, id=pallet_location_id)
             sensor_position = get_object_or_404(SensorLocation, id=sensor_position_id)
+            estado = get_object_or_404(Status, state='Pending')
 
-            # Crear o actualizar sensor
+            timezone = None
+            if sensor_data.get("timezone"):
+                timezone = TimeZoneChoices.objects.filter(value=sensor_data["timezone"]).first()
+
             sensor, created = Sensor.objects.get_or_create(
-                serial_number=serial_number,
+                serial_number=sensor_data["serial_number"],
                 trip=trip,
                 defaults={
-                    "device": device,
+                    "device": sensor_data["device"],
                     "tag": sensor_tag,
                     "pallet_location": pallet_location,
                     "sensor_position": sensor_position,
+                    "timezone": timezone,
+                    "status": estado
                 },
             )
 
             if not created:
-                # Actualizar información del sensor existente si es necesario
-                sensor.device = device
+                sensor.device = sensor_data["device"]
                 if sensor_tag and sensor.tag != sensor_tag:
                     sensor.tag = sensor_tag
                 sensor.pallet_location = pallet_location
                 sensor.sensor_position = sensor_position
+                sensor.timezone = timezone
                 sensor.save()
 
-            # Procesar las líneas de datos
-            is_data_section = False
-            records = []
-            errors = []
-            current_tz = get_current_timezone()
+            # Extraer y guardar registros de temperatura
+            decoded_file.seek(0)  # Volver al inicio del archivo
+            records, last = self.extract_temperature_records(decoded_file, file_extension, trip, sensor, sensor_data["timezone"])
 
-            for line in lines:
+            if records:
+                Record.objects.bulk_create(records, batch_size=1000)
+            
+            success_message = f"Sensor {'created' if created else 'updated'} successfully. Imported {len(records)} records."
+            return render(request, self.template_name, {
+                "nameWeb": "Sensor Data Upload",
+                "title": "Add Sensor Data",
+                "trip": trip,
+                "sensor_locations": SensorLocation.objects.all(),
+                "pallet_locations": PalletLocation.objects.all(),
+                "success_message": success_message,
+                "po": last
+            })
+
+        except Exception as e:
+            return self.get_context_with_error(trip, f"Unexpected error: {e}")
+
+    def extract_sensor_info(self, file, file_extension):
+        """Extrae la información del sensor del archivo CSV o TXT"""
+        sensor_info = {
+            "serial_number": "Unknown",
+            "device": "Unknown",
+            "timezone": None,
+        }
+
+        if file_extension == "csv":
+            reader = csv.reader(file)
+            for row in reader:
+                if len(row) < 2:
+                    continue
+                key, value = row[0].strip(), row[1].strip()
+                if key.startswith("Modelo de dispositivo") or key.startswith("Model"):
+                    sensor_info["device"] = value
+                elif key.startswith("Número de serie")  or key.startswith("S/N") :
+                    sensor_info["serial_number"] = value
+                elif key.startswith("Zona horaria")  or key.startswith("Timezone"):
+                    sensor_info["timezone"] = value
+                elif key.lower().startswith("no."):  # Fin de los metadatos
+                    break
+
+        elif file_extension == "txt":
+            for line in file:
                 line = line.strip()
-                if line.startswith("No."):
+                if line.startswith("Modelo de dispositivo:") or line.startswith("Model :"):
+                    sensor_info["device"] = line.split(":", 1)[1].strip()
+                elif line.startswith("Número de serie:") or line.startswith("S/N :"):
+                    sensor_info["serial_number"] = line.split(":", 1)[1].strip()
+                elif line.startswith("Zona horaria:") or line.startswith("Timezone :") :
+                    sensor_info["timezone"] = line.split(":", 1)[1].strip()
+                elif line.startswith("No."):  # Fin de los metadatos
+                    break
+
+        return sensor_info
+
+    def extract_temperature_records(self, file, file_extension, trip, sensor, timezone):
+        """Extrae registros de temperatura del archivo CSV o TXT"""
+        records = []
+        current_tz = get_current_timezone()
+        errors = []
+        is_data_section = False
+
+        tz = str(timezone)
+
+        departure_date  = str(trip.departure_date) 
+        departure_tz   = str(trip.departure_timezone.value)
+
+        arrival_date   = str(trip.arrival_date)
+        arrival_tz     = str(trip.arrival_timezone.value)
+
+        # Verificar si timezone es un diccionario, un objeto o None
+        
+        n_departure_date = self.convertir_zona_horaria(departure_date, departure_tz, tz)
+        n_arrival_date = self.convertir_zona_horaria(arrival_date, arrival_tz, tz)
+        
+        last = departure_date +' ### '+ departure_tz + ' ###'+ tz +' === '+ n_departure_date.strftime("%Y-%m-%d %H:%M:%S")
+
+        last = last +str(arrival_date) +' ### '+str( arrival_tz) + '### '+ tz +' === ' +n_arrival_date.strftime("%Y-%m-%d %H:%M:%S")
+        
+        if file_extension == "csv":
+            reader = csv.reader(file)
+            records = []
+            
+            for row in reader:
+                try:
+                    # Validar que la fila tenga al menos 3 columnas
+                    if len(row) < 3:
+                        print(f"Ignorando fila incompleta: {row}")  # Diagnóstico
+                        continue
+
+                    # Limpiar espacios extra en cada columna
+                    number = int(row[0].strip())
+                    time_str = row[1].strip()
+                    temperature = float(row[2].strip())
+
+                    # Formatear la hora correctamente
+                    time_str = time_str.replace("a. m.", "AM").replace("p. m.", "PM").strip()
+                    naive_time = datetime.strptime(time_str, "%d/%m/%Y %I:%M:%S %p")
+                        
+                    if (naive_time <= n_arrival_date) and (naive_time >= n_departure_date):
+                        records.append(Record(
+                            sensor=sensor,
+                            number=number,
+                            time=naive_time,
+                            temperature=temperature
+                        ))
+
+                except ValueError as e:
+                    print(f"Error procesando fila {row}: {e}")  # Diagnóstico
+
+                
+        elif file_extension == "txt":
+            
+            for line in file:
+                line = line.strip()
+                if line.lower().startswith("no."):
                     is_data_section = True
                     continue
-
                 if is_data_section:
                     try:
                         parts = [part.strip() for part in line.split() if part.strip()]
@@ -299,59 +457,66 @@ class RecordAdd(View):
 
                         number = int(parts[0])
                         time_str = f"{parts[1]} {parts[2]} {parts[-3]} {parts[-2]}"
-                        temperature_str = parts[-1]
+                        temperature = float(parts[-1])
 
                         time_str = time_str.replace("a. m.", "AM").replace("p. m.", "PM").strip()
-                        date_format = "%d/%m/%Y %I:%M:%S %p"
-                        naive_time = datetime.strptime(time_str, date_format)
-                        aware_time = current_tz.localize(naive_time)
-
-                        if not (trip.departure_date <= aware_time <= trip.arrival_date):
-                            errors.append(f"Time '{aware_time}' out of trip range.")
-                            continue
-
-                        temperature = float(temperature_str)
-
-                        records.append(Record(
-                            sensor=sensor,
-                            number=number,
-                            time=aware_time,
-                            temperature=temperature
-                        ))
+                        naive_time = datetime.strptime(time_str, "%d/%m/%Y %I:%M:%S %p")
+                        
+                        if (naive_time <= n_arrival_date) and (naive_time >= n_departure_date):
+                            records.append(Record(
+                                sensor=sensor,
+                                number=number,
+                                time=naive_time,
+                                temperature=temperature
+                            ))
+                        
                     except Exception as e:
-                        errors.append(f"Error parsing line '{line}': {e}")
-                        continue
+                        print(f"Error parsing TXT line '{line}': {e}")
+            #last = last +' len: '+ str(len(records))
+        last = ''
+        return records , last
 
-            Record.objects.bulk_create(records, batch_size=1000)
+    
+    def convertir_zona_horaria(self, fecha_str, zona_origen, zona_destino):
 
-            success_message = f"Sensor {'created' if created else 'updated'} successfully. Imported {len(records)} records."
-            if errors:
-                success_message += f" Encountered {len(errors)} errors."
+        # Extraer el formato UTC ±HH:MM usando regex
+        match_origen = re.match(r"UTC ([+-])(\d{2}):(\d{2})", zona_origen)
+        match_destino = re.match(r"UTC ([+-])(\d{2}):(\d{2})", zona_destino)
 
-            context = {
-                "nameWeb": nameWeb,
-                "title": "Add Sensor Data",
-                "trip": trip,
-                "sensor_locations": SensorLocation.objects.all(),
-                "pallet_locations": PalletLocation.objects.all(),
-                "errors": errors,
-                "success_message": success_message,
-            }
-            return render(request, self.template_name, context)
+        if not match_origen or not match_destino:
+            raise ValueError(f"Formato de zona horaria inválido: {zona_origen} o {zona_destino}")
 
-        except Exception as e:
-            context = self.get_context_with_error(trip, f"Unexpected error: {e}")
-            return render(request, self.template_name, context)
+        # Extraer valores de la zona horaria original y destino
+        signo_origen, horas_origen, minutos_origen = match_origen.groups()
+        signo_destino, horas_destino, minutos_destino = match_destino.groups()
+
+        # Calcular el desplazamiento en minutos
+        offset_origen = int(signo_origen + horas_origen) * 60 + int(signo_origen + minutos_origen)
+        offset_destino = int(signo_destino + horas_destino) * 60 + int(signo_destino + minutos_destino)
+
+        # Diferencia de tiempo entre la zona de origen y destino
+        diferencia_tiempo = offset_destino - offset_origen
+
+        # Convertir string a datetime (sin zona horaria)
+        fecha_dt = datetime.strptime(fecha_str[:19], "%Y-%m-%d %H:%M:%S")
+
+        # Aplicar la diferencia de tiempo
+        fecha_convertida = fecha_dt + timedelta(minutes=diferencia_tiempo)
+
+        return fecha_convertida
+
 
     def get_context_with_error(self, trip, error_message):
-        return {
-            "nameWeb": nameWeb,
+        """Devuelve el contexto con un mensaje de error"""
+        return render(self.template_name, {
+            "nameWeb": "Sensor Data Upload",
             "title": "Add Sensor Data",
             "trip": trip,
             "sensor_locations": SensorLocation.objects.all(),
             "pallet_locations": PalletLocation.objects.all(),
             "error": error_message,
-        }
+        })
+
 
 class AnalysisViewSensor(DetailView):
     model = Sensor
@@ -399,15 +564,22 @@ class AnalysisViewSensor(DetailView):
                 message = 'SHIPMENT REJECTED'
                 description = f"The percentage of temperatures exceeding the allowed limit ({TemLimUp}) reached {pTemUp}%, surpassing the permitted threshold of {pTemLimUp}."
                 do = "api_generate_temperatures_up"
+                estado= get_object_or_404(Status, state='Rejected')
+                self.object.status = estado
             elif pTemLow > pTemLimLow:
                 message = 'SHIPMENT ACCEPTED'
                 description = f"SHIPMENT ACCEPTED: For more than {pTemLow}% of the shipping time, the temperature remained below the lower threshold of {TemLimLow}."
                 do = "api_generate_temperatures_low"
+                estado= get_object_or_404(Status, state='Approved')
+                self.object.status= estado
             else:
                 message = 'SHIPMENT ANALYSIS'
                 description = "The algorithm and the mathematical model are being executed to analyze the shipment."
                 do = "graficar_algoritmo"
-                
+                estado= get_object_or_404(Status, state='Analysis')
+                self.object.status = estado
+            # Guardar el estado actualizado
+            self.object.save()
             # Actualizar contexto
             context.update({
                 "min_temp": str(round(min_temp, 2)).replace(",", "."),
@@ -479,7 +651,6 @@ class Analysis:
             'dtu': equation.dtu,
         }
           
-
     def get_context_data(self, **kwargs):
         # Usa self.sensor para obtener datos específicos
         if not self.sensor:
@@ -626,11 +797,11 @@ class Analysis:
                     df.at[i, 'n'] = n_2
 
                     # Modelo original
-                    logN_2 = round(b_2 * (( dt_2 +1/24 )** n_2), self.cifra)
+                    logN_2 = round(b_2 * (( dt_2 +(1/24) )** n_2), self.cifra)
                     df.at[i, 'logN'] = logN_2
 
                     # Modelo compuesto
-                    logNc_2 = round(bc * (dt_2 ** nc), self.cifra)
+                    logNc_2 = round(bc * ( (dt_2+(1/24) )** nc), self.cifra)
                     df.at[i, 'logNc'] = logNc_2
 
                     # RPI
@@ -709,8 +880,10 @@ class Analysis:
                 ultimo_valor = mask[-1]
                 if df.loc[ultimo_valor, 'RPI']  <= 1:
                     message = 'SHIPMENT ACCEPTED'
+                    description = 'RPI <=1'
                 else:
                     message = 'SHIPMENT REJECTED'
+                    description = 'RPI >1'
 
 
             # Convertir valores de LPA > 1 a pd.NA
@@ -726,7 +899,8 @@ class Analysis:
             'title': aux,
             't_h_at_max_lpa': t_h_at_max_lpa,
             't_h_at_max_lpa_porcent': t_h_at_max_lpa_porcent,
-            'message': message
+            'message': message,
+            'description': description
         }
         return context
 
@@ -873,13 +1047,30 @@ def api_generate_graph(request, pk):
     # Codificar la imagen en base64
     image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
+    # Determinar el estado según el mensaje del contexto
+    status_name = None
+    if context['message'] == 'SHIPMENT REJECTED':
+        status_name = 'Rejected'
+    elif context['message'] == 'SHIPMENT ACCEPTED':
+        status_name = 'Approved'
+
+    # Asignar estado al sensor si se determina un nuevo estado
+    if status_name:
+        try:
+            estado = Status.objects.get(state=status_name)
+            if sensor.status != estado:  # Evita actualizar si ya tiene el estado correcto
+                sensor.status = estado
+                sensor.save()
+        except Status.DoesNotExist:
+            return JsonResponse({"error": f"Status '{status_name}' not found"}, status=500)
+
     # Retornar imagen codificada y texto en JSON
     return JsonResponse({
-        "message": "Generated successfully.",
         "image": image_base64,
         "t_h_at_max_lpa": context['t_h_at_max_lpa'],
-        't_h_at_max_lpa_porcent': context['t_h_at_max_lpa_porcent'],
-        'message': context['message']
+        "t_h_at_max_lpa_porcent": context['t_h_at_max_lpa_porcent'],
+        "message": context['message'],
+        "description": context['description']
     })
 
 def api_generate_temperatures_up(request, pk):
@@ -1185,21 +1376,30 @@ def api_export_csv_analysis(request, pk):
     writer = csv.writer(response)
 
     # Escribir encabezados
-    writer.writerow(['t', 'LPA', 'RPI', 'mRPI', 'T','Temperature Low Limit (°C)', 'Temperature High Limit (°C)'])
+    writer.writerow(['t', 'LPA', 'RPI', 'mRPI', 'T', 'Temperature Low Limit (°C)', 'Temperature High Limit (°C)'])
 
-    # Convertir los datos a arrays numpy y reemplazar NaN con 0
-    data_arrays = [
-        np.array(context[key], dtype=np.float64) for key in ['t', 'LPA', 'RPI', 'mRPI', 'T']
-    ]
-    data_arrays = [np.nan_to_num(arr) for arr in data_arrays]
+    # Procesar los datos asegurándose de manejar correctamente NaN, NAType y valores no numéricos
+    keys = ['t', 'LPA', 'RPI', 'mRPI', 'T']
+    data_arrays = []
+
+    for key in keys:
+        raw_data = context.get(key, [])
+        clean_data = []
+        for x in raw_data:
+            try:
+                # Convertir a float, manejando NAType y valores no numéricos
+                clean_data.append(float(x))
+            except (ValueError, TypeError):
+                # Reemplazar valores inválidos con 0
+                clean_data.append(0)
+        data_arrays.append(np.array(clean_data, dtype=np.float64))
 
     # Escribir los datos al archivo CSV
     for row in zip(*data_arrays):
         writer.writerow(list(row) + [TemLimLow, TemLimUp])
 
-     # Retornar la respuesta
+    # Retornar la respuesta
     return response
-
 
 def api_export_temperatures_up_csv(request, pk):
     """

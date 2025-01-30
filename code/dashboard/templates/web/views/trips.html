@@ -78,6 +78,7 @@
                                         <th>Microorganism</th>
                                         <th>From</th>
                                         <th>To</th>
+                                        <th>Tools</th>
                                         <th>View</th>
                                     </tr>
                                 </thead>
@@ -88,10 +89,23 @@
                                         <td>{{ trip.shipment }}</td>
                                         <td>{{ trip.product.description }}</td>
                                         <td>{{ trip.microorganism.description }}</td>
-                                        <td>{{ trip.origin }} - {{ trip.departure_date|date:"Y-m-d H:i" }}</td>
-                                        <td>{{ trip.destination }} - {{ trip.arrival_date|date:"Y-m-d H:i" }}</td>
                                         <td>
-                                            <a href="{% url 'detail_trip' trip.id %}" class="btn btn-info btn-sm">View Details</a>
+                                            {{ trip.origin }} <br>
+                                            {{ trip.departure_date|date:"Y-m-d H:i" }} 
+                                            ({{ trip.departure_timezone.value }})
+                                        </td>
+                                        <td>
+                                            {{ trip.destination }} <br>
+                                            {{ trip.arrival_date|date:"Y-m-d H:i" }} 
+                                            ({{ trip.arrival_timezone.value }})
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-danger delete-trip-btn" data-trip-id="{{ trip.id }}">
+                                                Delete
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'detail_trip' trip.id %}" class="btn btn-info"> Details</a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -123,6 +137,40 @@
 </div>
 {% endblock %}
 
+
 {% block extraJs %}
-<!-- Additional JavaScript can be included here if needed -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".delete-trip-btn").forEach(button => {
+        button.addEventListener("click", function () {
+            let tripId = this.getAttribute("data-trip-id");
+
+            if (!confirm("Are you sure you want to delete this trip?")) return;
+
+            fetch(`/trips/delete/${tripId}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert(data.message); // Muestra mensaje de confirmación
+                    
+                    // Forzar recarga de la página después de eliminar
+                    window.location.href = window.location.href;
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error deleting trip:", error));
+        });
+    });
+});
+</script>
 {% endblock %}
+
+
+

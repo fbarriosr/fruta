@@ -18,7 +18,7 @@
                     </div>
                     <div class="card-body">
                         <!-- Formulario para cargar archivo -->
-                        <form method="post" enctype="multipart/form-data" action="{% url 'add_records' trip.id %}">
+                        <form method="post" enctype="multipart/form-data" action="{% url 'add_records' trip.id %}" id="uploadForm">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-6 col-lg-4">
@@ -28,7 +28,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="col-md-6 col-lg-1">
+                                <div class="col-md-6 col-lg-2">
                                     <div class="form-group">
                                         <label for="palletLocationSelect">Pallet Location</label>
                                         <select name="pallet_location" class="form-control" id="palletLocationSelect" required>
@@ -51,12 +51,18 @@
                                 <div class="col-md-6 col-lg-4">
                                     <div class="form-group">
                                         <label for="dataFileInput">Select File</label>
-                                        <input type="file" name="data_file" class="form-control-file" id="dataFileInput" required />
+                                        <input type="file" name="data_file" class="form-control-file" id="dataFileInput" accept=".txt, .csv" required />
                                     </div>
                                 </div>
                             </div>
                             <div class="card-action">
-                                <button type="submit" class="btn btn-success">Upload</button>
+                                <button type="submit" class="btn btn-success" id="uploadButton">
+                                    Upload
+                                </button>
+                                <!-- Loader oculto inicialmente -->
+                                <div id="loadingSpinner" class="spinner-border text-primary" role="status" style="display: none; margin-left: 10px;">
+                                    <span class="sr-only">Uploading...</span>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -64,6 +70,7 @@
             </div>
         </div>
 
+        <div>{{ po }}</div>
         <!-- Alertas y mensajes de estado -->
         {% if alert %}
         <div class="alert alert-info">
@@ -71,9 +78,9 @@
         </div>
         {% endif %}
 
-        {% if success %}
+        {% if success_message %}
         <div class="alert alert-success">
-            {{ success }}
+            {{ success_message}}
         </div>
         {% endif %}
 
@@ -103,6 +110,7 @@
                 {% for err in errors %}
                 <li>{{ err }}</li>
                 {% endfor %}
+                <li>...</li>
             </ul>
         </div>
         {% endif %}
@@ -141,5 +149,21 @@
 {% endblock %}
 
 {% block extraJs %}
-<!-- Add any additional JavaScript if needed -->
+<script>
+document.getElementById("uploadForm").addEventListener("submit", function(event) {
+    var fileInput = document.getElementById("dataFileInput");
+    var filePath = fileInput.value;
+    var allowedExtensions = /(\.txt|\.csv)$/i;
+
+    if (!allowedExtensions.exec(filePath)) {
+        alert("Solo se permiten archivos TXT y CSV.");
+        fileInput.value = "";
+        event.preventDefault();
+        return false;
+    }
+
+    document.getElementById("uploadButton").disabled = true;
+    document.getElementById("loadingSpinner").style.display = "inline-block";
+});
+</script>
 {% endblock %}

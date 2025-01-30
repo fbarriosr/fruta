@@ -16,5 +16,7 @@ urlpatterns = [
     path('api_export_temperatures_low_csv/<uuid:pk>/', api_export_temperatures_low_csv, name='api_export_temperatures_low_csv'),
     path('api_export_temperatures_up_csv/<uuid:pk>/', api_export_temperatures_up_csv, name='api_export_temperatures_up_csv'),
     path('api_export_temperatures_limits_csv/<uuid:pk>/', api_export_temperatures_limits_csv, name='api_export_temperatures_limits_csv'),
-    
+    path('trips/delete/<uuid:trip_id>/', DeleteTripView.as_view(), name='delete_trip'),
+    path('sensors/delete/<uuid:sensor_id>/', DeleteSensorView.as_view(), name='delete_sensor'),
+
 ]

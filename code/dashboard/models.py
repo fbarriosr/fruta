@@ -4,9 +4,20 @@ from autoslug import AutoSlugField
 from django.utils import timezone
 from import_export.admin import ImportExportModelAdmin
 from django.utils.timezone import now  # Import the 'now' function
+from pytz import timezone, all_timezones
 import uuid
 import os
 
+
+class TimeZoneChoices(models.Model):
+    """
+    Model to store timezone choices with a unique ID and value.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    value = models.CharField(max_length=10, unique=True)  # Value in format 'UTC ±HH:MM'
+
+    def __str__(self):
+        return self.value
 
 class ProductType(models.Model):
     """
@@ -63,25 +74,39 @@ class Parameters(models.Model):
 
 class Trip(models.Model):
     """
-    Model to represent a refrigerated trip.
+    Model to represent a refrigerated trip with timezone support.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     shipment = models.CharField(max_length=255, default='')  # Shipment
-    license_plate = models.CharField(max_length=255 )  # Vehicle identification
+    license_plate = models.CharField(max_length=255)  # Vehicle identification
     driver = models.CharField(max_length=255)  # Driver's name
     origin = models.CharField(max_length=255)  # Origin location
     destination = models.CharField(max_length=255)  # Destination location
     departure_date = models.DateTimeField()  # Departure date and time
+    departure_timezone = models.ForeignKey(
+        TimeZoneChoices,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='departure_trips'
+    )  # Departure timezone as ForeignKey
     arrival_date = models.DateTimeField()  # Arrival date and time
+    arrival_timezone = models.ForeignKey(
+        TimeZoneChoices,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='arrival_trips'
+    )  # Arrival timezone as ForeignKey
     product = models.ForeignKey(
-        ProductType,
+        'ProductType',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="trips"
     )  # Product type as foreign key
     microorganism = models.ForeignKey(
-        Microorganism,
+        'Microorganism',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -91,16 +116,17 @@ class Trip(models.Model):
     def __str__(self):
         return f"Trip {self.license_plate} ({self.departure_date} - {self.arrival_date})"
 
-class DecisionMessage(models.Model):
+
+class Status(models.Model):
     """
     Model to represent decision messages.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    decision = models.CharField(max_length=255)  # Decision text
-    descripcion = models.TextField()  # Description of the decision message
+    state = models.CharField(max_length=255)  # Decision text
 
     def __str__(self):
-        return self.decision
+        return self.state
+
 
 class Sensor(models.Model):
     """
@@ -119,7 +145,7 @@ class Sensor(models.Model):
     )  # Pallet location as foreign key
     trip = models.ForeignKey(
         'Trip',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,  # Elimina los sensores cuando se borra un trip
         related_name="sensors",
         null=True,
         blank=True, 
@@ -138,24 +164,31 @@ class Sensor(models.Model):
     max_temperature = models.FloatField(null=True, blank=True, default=None)  # Max Temperature
     min_temperature = models.FloatField(null=True, blank=True, default=None)  # Min Temperature
     lpa_max_time = models.CharField(max_length=255, null=True, blank=True, default='')  # LPA MAX TIME
-    decision_messages = models.ForeignKey(
-        DecisionMessage,
+    analysis = models.ImageField(upload_to='sensor_analysis/', null=True, blank=True, default=None)  # Analysis image
+    status = models.ForeignKey(
+        'Status',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='sensors'
-    )  # Decision Messages as ForeignKey
-    analysis = models.ImageField(upload_to='sensor_analysis/', null=True, blank=True, default=None)  # Analysis image
-    approved = models.BooleanField(default=False)  # Approved
+    )  # Status as ForeignKey
     total_records = models.PositiveIntegerField(default=0)  # Total Records
+    timezone = models.ForeignKey(
+        TimeZoneChoices,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='timezone_sensors'
+    )  # Departure timezone as ForeignKey
 
     def __str__(self):
         return f"{self.device} - {self.serial_number}"
 
+
 class Record(models.Model):
     sensor = models.ForeignKey(
         Sensor,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE,  # Elimina los registros cuando se borra un sensor
         related_name="records",
         null=True,
         blank=True
