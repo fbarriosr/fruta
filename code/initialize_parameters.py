@@ -86,6 +86,101 @@ def initialize_data():
     for microorganism in microorganisms:
         Microorganism.objects.get_or_create(name=microorganism['name'], defaults={'description': microorganism['description']})
 
+    # Inicializar Equation para PSYCHROPHILES y UNTREATED
+    microorganism = Microorganism.objects.get(name='PSYCHROPHILES')
+    product = ProductType.objects.get(name='UNTREATED')
+
+    Equation.objects.get_or_create(
+        microorganism=microorganism,
+        product=product,
+        defaults={
+            'LPD_form': "k*mT**a",
+            'LPD_parameters': "{'k': 1.3, 'a': -0.14}",
+            'b_form': "k_b * np.log(mT) + a_b",
+            'b_parameters': "{'k_b': 0.5757, 'a_b': 3.0481}",
+            'n_form': "k_n * (mT ** a_n)",
+            'n_parameters': "{'k_n': 0.1226, 'a_n': 0.0517}",
+            'Tc': "{'Tc': 4.0}",
+            'dtu': "{'dtu':  1 / (24 * 60 * 60)}",
+        }
+    )
+
+    # Inicializar Equation para PSYCHROPHILES y OHMIC_HEATING
+    microorganism = Microorganism.objects.get(name='PSYCHROPHILES')
+    product = ProductType.objects.get(name='OHMIC_HEATING')
+
+    Equation.objects.get_or_create(
+        microorganism=microorganism,
+        product=product,
+        defaults={
+            'LPD_form': "k*mT**a",
+            'LPD_parameters': "{'k': 12.66 , 'a': -0.92 }",
+            'b_form': "k_b * np.log(mT) + a_b",
+            'b_parameters': "{'k_b': 0.60 , 'a_b': 1.38 }",
+            'n_form': "k_n * (mT ** a_n)",
+            'n_parameters': "{'k_n': 0.08 , 'a_n': 0.56 }",
+            'Tc': "{'Tc': 4.0}",
+            'dtu': "{'dtu':  1 / (24 * 60 * 60)}",
+        }
+    )
+
+    # Inicializar Equation para PSYCHROPHILES y HTST
+    microorganism = Microorganism.objects.get(name='PSYCHROPHILES')
+    product = ProductType.objects.get(name='HTST')
+
+    Equation.objects.get_or_create(
+        microorganism=microorganism,
+        product=product,
+        defaults={
+            'LPD_form': "k*mT**a",
+            'LPD_parameters': "{'k': 36.04  , 'a': -1.71  }",
+            'b_form': "k_b * np.log(mT) + a_b",
+            'b_parameters': "{'k_b': 2.39  , 'a_b': -0.87 }",
+            'n_form': "k_n * (mT ** a_n)",
+            'n_parameters': "{'k_n': 1.54 , 'a_n': -1.38  }",
+            'Tc': "{'Tc': 4.0}",
+            'dtu': "{'dtu':  1 / (24 * 60 * 60)}",
+        }
+    )
+
+    # Inicializar Equation para MOLDS_YEASTS y OHMIC_HEATING
+    microorganism = Microorganism.objects.get(name='MOLDS_YEASTS')
+    product = ProductType.objects.get(name='OHMIC_HEATING')
+
+    Equation.objects.get_or_create(
+        microorganism=microorganism,
+        product=product,
+        defaults={
+            'LPD_form': "k*mT**a",
+            'LPD_parameters': "{'k': 6.14   , 'a': -0.51  }",
+            'b_form': "k_b * np.exp(a_b*mT) ",
+            'b_parameters': "{'k_b': 1.69   , 'a_b': 0.024  }",
+            'n_form': "k_n *np.log(mT + a_n)",
+            'n_parameters': "{'k_n': 0.02  , 'a_n': 0.09 }",
+            'Tc': "{'Tc': 4.0}",
+            'dtu': "{'dtu':  1 / (24 * 60 * 60)}",
+        }
+    )
+
+    # Inicializar Equation para MOLDS_YEASTS y HTST
+    microorganism = Microorganism.objects.get(name='MOLDS_YEASTS')
+    product = ProductType.objects.get(name='HTST')
+
+    Equation.objects.get_or_create(
+        microorganism=microorganism,
+        product=product,
+        defaults={
+            'LPD_form': "k*mT**a",
+            'LPD_parameters': "{'k': 26.78    , 'a': -1.13   }",
+            'b_form': "k_b * np.exp(a_b*mT) ",
+            'b_parameters': "{'k_b': 1.04   , 'a_b': 0.057   }",
+            'n_form': "k_n *np.log(mT) + a_n",
+            'n_parameters': "{'k_n': -0.00132 , 'a_n': 0.36 }",
+            'Tc': "{'Tc': 4.0}",
+            'dtu': "{'dtu':  1 / (24 * 60 * 60)}",
+        }
+    )
+
     # Crear un ejemplo de Trip con zona horaria
     microorganism = Microorganism.objects.get(name="PSYCHROPHILES")
     product = ProductType.objects.get(name="UNTREATED")
@@ -118,7 +213,7 @@ def initialize_data():
         microorganism=microorganism
     )
 
-    print("TimeZoneChoices, Status, Parameters, SensorLocation, PalletLocation, ProductType, Microorganism, and Trips initialized successfully.")
+    print("TimeZoneChoices, Status, Parameters, SensorLocation, PalletLocation, ProductType, Microorganism,Equations and Trips initialized successfully.")
 
 if __name__ == '__main__':
     initialize_data()
