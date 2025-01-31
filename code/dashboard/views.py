@@ -522,12 +522,21 @@ class AnalysisViewSensor(DetailView):
     model = Sensor
     template_name = "web/views/analysis.html"
     context_object_name = 'sensor'
-    cifra = 5  # Definir la cantidad de cifras significativas
+    
+    def get_cifra(self):
+        """
+        Recupera el valor de 'cifra' desde el modelo Parameters.
+        """
+        cifra_param = Parameters.objects.filter(name='cifraFront').first()
+        if cifra_param:
+            return int(cifra_param.value)
+        return 10  # Valor por defecto si no se encuentra
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         records = self.object.records.order_by('time')
-
+        cifra = self.get_cifra()
+          # Definir la cantidad de cifras significativas
         if records.exists():
 
             TemLimUp  = Parameters.objects.filter(name='max_temp').first().value
@@ -550,8 +559,8 @@ class AnalysisViewSensor(DetailView):
 
             # Calcular diferencia de tiempo
             time_difference = max_date - min_date
-            decimal_days = np.round(time_difference.days + time_difference.seconds / 86400, self.cifra)
-            decimal_hours = np.round(time_difference.total_seconds() / 3600, self.cifra)
+            decimal_days = np.round(time_difference.days + time_difference.seconds / 86400, cifra)
+            decimal_hours = np.round(time_difference.total_seconds() / 3600, cifra)
 
             # Crear DataFrame desde los registros
             values = records.values_list('number', 'time', 'temperature')
@@ -619,7 +628,7 @@ class AnalysisViewSensor(DetailView):
 class Analysis:
     def __init__(self, sensor=None):
         self.sensor = sensor  # Asigna el sensor al atributo de la clase
-        self.cifra = self.get_cifra()  # Recupera el valor de 'cifra' desde Parameters
+        self.cifra = self.get_cifra() # Recupera el valor de 'cifra' desde Parameters
         self.ecuacion = self.get_equation_parameters()
     def get_cifra(self):
         """
@@ -628,7 +637,7 @@ class Analysis:
         cifra_param = Parameters.objects.filter(name='cifra').first()
         if cifra_param:
             return int(cifra_param.value)
-        return 5  # Valor por defecto si no se encuentra
+        return 10  # Valor por defecto si no se encuentra
     def get_equation_parameters(self):
         if not self.sensor or not self.sensor.trip:
             raise ValueError("Sensor or associated trip is required to fetch equation parameters.")
@@ -638,7 +647,7 @@ class Analysis:
 
         equation = Equation.objects.filter(product=product).filter(microorganism=microorganism).first()
         if not equation:
-            raise ValueError(f"No equation found for product '{product}' and microorganism '{microorganisms}'.")
+            raise ValueError(f"No equation found for product '{product}' and microorganism '{microorganism}'.")
 
         return {
             'LPD_form': equation.LPD_form,
@@ -657,6 +666,9 @@ class Analysis:
             raise ValueError("Sensor is required to generate context data.")
         
         records = self.sensor.records.order_by('time')
+        description = ""
+        product = self.sensor.trip.product.name
+        microorganism = self.sensor.trip.microorganism.name
         
         if records.exists():
             # Calcular estadísticas básicas
@@ -703,15 +715,17 @@ class Analysis:
             
             # Calcular LPD y LPA
             #df['LPD'] = np.round(k * (df['mT'] ** a), self.cifra).where(df['mT'].notna(), np.nan)
-            df['LPD'] = np.round(eval(lpa_form, {"__builtins__": None}, variables), self.cifra).where(df['mT'].notna(), np.nan)
+            
+            if product == "UNTREATED" and microorganism =="MOLDS_YEASTS":
+                df['LPA'] = np.ones(len(df['dt']))
+            else:
+                df['LPD'] = np.round(eval(lpa_form, {"__builtins__": None}, variables), self.cifra).where(df['mT'].notna(), np.nan)
 
-            df['LPA'] = (df['dt'] / df['LPD']).cumsum()
+                df['LPA'] = (df['dt'] / df['LPD']).cumsum()
 
             # calculos de LPA >=1 
             # Constantes para calculos LPA >=1
             # Recuperar los parámetros de la ecuación
-            
-            k_b, a_b, k_n, a_n = 0.5757, 3.0481, 0.1226, 0.0517
             
             b_param = eval(self.ecuacion['b_parameters'])
             n_param = eval(self.ecuacion['n_parameters'])
@@ -869,27 +883,76 @@ class Analysis:
                     RPI = round(logN / logNc, self.cifra) if logNc > 0 else pd.NA
                     df.at[i, 'RPI'] = RPI
                     
-                    # Calcular mRPI si existen suficientes registros
-                    if pd.notna(logN) and pd.notna(df['logN'].iloc[i - 120]) and pd.notna(logNc) and pd.notna(df['logNc'].iloc[i - 120]):
-                        mRPI = round((logN - df['logN'].iloc[i - 120]) / (logNc - df['logNc'].iloc[i - 120]), self.cifra)
+                    # Calcular mRPI si existen suficientes registros y el denominador no es 0, NaN o Inf
+                    # Calcular mRPI si existen suficientes registros y el denominador no es 0, NaN o Inf
+                    if (
+                        pd.notna(logN) and 
+                        pd.notna(df['logN'].iloc[i - 120]) and 
+                        pd.notna(logNc) and 
+                        pd.notna(df['logNc'].iloc[i - 120])
+                    ):
+                        denominator = logNc - df['logNc'].iloc[i - 120]
+
+                        if denominator == 0 or pd.isna(denominator) or np.isinf(denominator):
+                            mRPI = pd.NA  # O puedes asignar otro valor como 0
+                        else:
+                            mRPI = round((logN - df['logN'].iloc[i - 120]) / denominator, self.cifra)
                     else:
                         mRPI = pd.NA
 
                     df.at[i, 'mRPI'] = mRPI
+                    #df.at[i, 'RPI'] = logNc
+                    #df.at[i, 'mRPI'] = logN
                 
                 ultimo_valor = mask[-1]
                 if df.loc[ultimo_valor, 'RPI']  <= 1:
                     message = 'SHIPMENT ACCEPTED'
-                    description = 'RPI <=1'
+                    description = 'RPI <= 1'
                 else:
                     message = 'SHIPMENT REJECTED'
-                    description = 'RPI >1'
-
+                    description = 'RPI > 1'
 
             # Convertir valores de LPA > 1 a pd.NA
-            df.loc[df['LPA'] > 1, 'LPA'] = pd.NA
-        
+            if product == "UNTREATED" and microorganism =="MOLDS_YEASTS":
+                df['LPA'] = 0
+            else:
+                df.loc[df['LPA'] > 1, 'LPA'] = pd.NA
+            
+            '''
+            df['dtu'] = dtu
+            df['bc'] = bc
+            df['nc'] = nc
+            '''
         # Simula datos de ejemplo (ajusta según tu implementación real)
+        '''
+        context = {
+            't': df['t_h'] , # Reemplaza con tus datos reales
+            'LPA': df['LPA'].tolist(),
+            'RPI': df['RPI'].tolist(),
+            'mRPI': df['mRPI'].tolist(),
+            'T': df['temperature'],
+            'title': aux,
+            't_h_at_max_lpa': t_h_at_max_lpa,
+            't_h_at_max_lpa_porcent': t_h_at_max_lpa_porcent,
+            'message': message,
+            'description': description,
+            'mT': df['mT'],
+            'b': df['b'],
+            'n': df['n'],
+            'tx': df['tx'],
+            'Na': df['Na'],
+            'Nb': df['Nb'],
+            'mu': df['mu'],
+            'logN': df['logN'],
+            'bc': df['bc'],
+            'nc': df['nc'],
+            'txc': df['txc'],
+            'Nac': df['Nac'],
+            'Nbc': df['Nbc'],
+            'muc': df['muc'],
+            'logNc': df['logNc']
+        }
+        '''
         context = {
             't': df['t_h'] , # Reemplaza con tus datos reales
             'LPA': df['LPA'].tolist(),
@@ -919,7 +982,7 @@ class Analysis:
         # Definir trazos y colores
         traces = [
             {"name": "LPA", "y": LPA, "color": "purple", "dash": "solid", "yaxis": "y1"},
-            {"name": "RPI", "y": RPI, "color": "purple", "dash": "dash", "yaxis": "y1"},
+            {"name": "RPI", "y": RPI, "color": "purple", "dash": "dot", "yaxis": "y1"},
             {"name": "mRPI", "y": mRPI, "color": "orange", "dash": "dot", "yaxis": "y1"},
             {"name": "Temperature", "y": T, "color": "green", "dash": "solid", "yaxis": "y2"}
         ]
@@ -981,7 +1044,7 @@ class Analysis:
             yaxis=dict(
                 title="LPA, RPI and mRPI",
                 range=[0, 3],
-                dtick=0.5,
+                dtick=1,
                 titlefont=dict(color="purple", size=28),
                 tickfont=dict(size=24, color="purple"),
                 showgrid=True,
@@ -990,8 +1053,8 @@ class Analysis:
             ),
             yaxis2=dict(
                 title="Temperature (°C)",
-                range=[0, 20],
-                dtick=2,
+                range=[0, 21],
+                dtick=3,
                 titlefont=dict(color="green", size=28),
                 tickfont=dict(size=24, color="green"),
                 overlaying="y",
@@ -1380,6 +1443,12 @@ def api_export_csv_analysis(request, pk):
 
     # Procesar los datos asegurándose de manejar correctamente NaN, NAType y valores no numéricos
     keys = ['t', 'LPA', 'RPI', 'mRPI', 'T']
+
+
+    #writer.writerow(['t','mT' ,'LPA','b','n', 'tx','Na','Nb','mu','logN','bc','nc', 'txc','Nac','Nbc','muc','logNc'  , 'RPI', 'mRPI'])
+    #keys = ['t','mT' ,'LPA','b','n', 'tx','Na','Nb','mu','logN','bc','nc', 'txc','Nac','Nbc','muc','logNc'  , 'RPI', 'mRPI']
+
+
     data_arrays = []
 
     for key in keys:
