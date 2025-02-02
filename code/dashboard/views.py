@@ -669,7 +669,7 @@ class Analysis:
         description = ""
         product = self.sensor.trip.product.name
         microorganism = self.sensor.trip.microorganism.name
-        
+        detail = ''
         if records.exists():
             # Calcular estadísticas básicas
             stats = records.aggregate(
@@ -780,6 +780,7 @@ class Analysis:
                 t_h_at_max_lpa = str(round(df['t_h'].loc[max_position],2))+' hours'  # valor th de LPA <1
                 t_h_at_max_lpa_porcent = str(round(float(df['LPA'].iloc[max_position])*100,0))+ ' %'
                 message = 'SHIPMENT ACCEPTED'
+                detail = 'Accepted because the lag phase was not completed.'
                 df['RPI'] = pd.NA
                 df['mRPI'] = pd.NA
             if len(mask) > 1:
