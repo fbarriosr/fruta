@@ -569,7 +569,7 @@ class AnalysisViewSensor(DetailView):
             pTemUp = np.round((sum(df['temperature'] > TemLimUp) / len(df['temperature'])) * 100, 2)
             pTemLow = np.round((sum(df['temperature'] < TemLimLow) / len(df['temperature'])) * 100,2)
 
-            if pTemUp > pTemLimUp:
+            if pTemUp > pTemLimUp :
                 message = 'SHIPMENT REJECTED'
                 description = f"The percentage of temperatures exceeding the allowed limit ({TemLimUp}) reached {pTemUp}%, surpassing the permitted threshold of {pTemLimUp}."
                 do = "api_generate_temperatures_up"
@@ -577,7 +577,7 @@ class AnalysisViewSensor(DetailView):
                 self.object.status = estado
             elif pTemLow > pTemLimLow:
                 message = 'SHIPMENT ACCEPTED'
-                description = f"SHIPMENT ACCEPTED: For more than {pTemLow}% of the shipping time, the temperature remained below the lower threshold of {TemLimLow}."
+                description = f"For more than {pTemLow}% of the shipping time, the temperature remained below the lower threshold of {TemLimLow}."
                 do = "api_generate_temperatures_low"
                 estado= get_object_or_404(Status, state='Approved')
                 self.object.status= estado
@@ -908,9 +908,12 @@ class Analysis:
                 if df.loc[ultimo_valor, 'RPI']  <= 1:
                     message = 'SHIPMENT ACCEPTED'
                     description = 'RPI <= 1'
+                    detail = "Executing the algorithm and mathematical model to analyze the shipment... Process completed. Result: SHIPMENT ACCEPTED (RPI <=1)."
                 else:
                     message = 'SHIPMENT REJECTED'
                     description = 'RPI > 1'
+                    detail = "Executing the algorithm and mathematical model to analyze the shipment... Process completed. Result: SHIPMENT REJECTED (RPI > 1)."
+
 
             # Convertir valores de LPA > 1 a pd.NA
             if product == "UNTREATED" and microorganism =="MOLDS_YEASTS":
@@ -963,7 +966,8 @@ class Analysis:
             't_h_at_max_lpa': t_h_at_max_lpa,
             't_h_at_max_lpa_porcent': t_h_at_max_lpa_porcent,
             'message': message,
-            'description': description
+            'description': description,
+            'detail': detail
         }
         return context
 
@@ -1133,7 +1137,8 @@ def api_generate_graph(request, pk):
         "t_h_at_max_lpa": context['t_h_at_max_lpa'],
         "t_h_at_max_lpa_porcent": context['t_h_at_max_lpa_porcent'],
         "message": context['message'],
-        "description": context['description']
+        "description": context['description'],
+        "detail": context['detail']
     })
 
 def api_generate_temperatures_up(request, pk):
